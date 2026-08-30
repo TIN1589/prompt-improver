@@ -1,6 +1,6 @@
 <div align="center">
 
-# ✨ Prompt Improver — AI Prompt Optimizer
+#  Prompt Improver — AI Prompt Optimizer
 
 **Trợ lý tối ưu hóa câu lệnh AI thời gian thực dành cho Chrome & Serverless Edge Backend**
 
@@ -24,7 +24,7 @@
 
 ---
 
-## 📖 Tổng Quan Dự Án
+## Tổng Quan Dự Án
 
 **Prompt Improver** là một giải pháp mở rộng trình duyệt (Chrome Extension MV3) kết hợp cùng Serverless Edge Backend (Cloudflare Workers). Tiện ích tự động tích hợp nút **"✨ Cải thiện"** trực tiếp vào giao diện của các nền tảng AI hàng đầu như **ChatGPT**, **Claude.ai**, **Google Gemini**, **Perplexity**, **DeepSeek**, **Copilot**... 
 
@@ -32,22 +32,22 @@ Khi người dùng soạn thảo, hệ thống tự động phân tích ngữ c�
 
 ---
 
-## ✨ Tính Năng Nổi Bật
+## Tính Năng Nổi Bật
 
-- ⚡ **2 Chế độ Tối ưu Thông minh**:
-  - 🎯 **Bản Tối giản (Minimal)**: Loại bỏ từ thừa, cô đọng nội dung, đi thẳng vào trọng tâm kỹ thuật, tiết kiệm token tối đa.
-  - 📋 **Bản Chi tiết (Detailed)**: Thiết lập Role/Persona chuyên gia, phân tích ngữ cảnh, bổ sung ràng buộc chất lượng và định dạng đầu ra chuẩn mực.
-- 💡 **Giả định Làm rõ (Assumptions Detection)**: Tự động phát hiện và cảnh báo các thông tin còn thiếu trong prompt ban đầu.
-- ↩️ **Hoàn tác Tức thì (1-Click Undo)**: Toast thông báo góc màn hình cho phép khôi phục nguyên trạng prompt gốc bất cứ lúc nào.
-- 🧠 **Nhận diện Tác vụ Tự động (Task Classification)**: Tự động phân loại `code`, `writing`, `analysis`, `translation`, `general` để áp dụng cấu trúc meta-prompt chuyên biệt.
-- 🚀 **Bảo mật Secret qua Cloudflare Worker**: Gemini API Key được mã hóa và lưu an toàn trên Cloudflare Worker Secrets, hoàn toàn không bị lộ ở client extension.
-- ⚡ **Local SHA-256 Hash Cache**: Cache kết quả băm SHA-256 trên trình duyệt, phản hồi tức thì với các prompt quen thuộc và tiết kiệm API quota.
-- 🎨 **Modern Neo-Brutalism & Glassmorphism UI**: Giao diện nổi bật, hiện đại, đóng gói trong **Shadow DOM** chống xung đột CSS với website chủ.
-- 🔄 **Cơ chế Kháng Lỗi (Exponential Backoff)**: Tự động thử lại khi gặp giới hạn tần suất gọi API (HTTP 429).
+-  **2 Chế độ Tối ưu Thông minh**:
+  -  **Bản Tối giản (Minimal)**: Loại bỏ từ thừa, cô đọng nội dung, đi thẳng vào trọng tâm kỹ thuật, tiết kiệm token tối đa.
+  -  **Bản Chi tiết (Detailed)**: Thiết lập Role/Persona chuyên gia, phân tích ngữ cảnh, bổ sung ràng buộc chất lượng và định dạng đầu ra chuẩn mực.
+-  **Giả định Làm rõ (Assumptions Detection)**: Tự động phát hiện và cảnh báo các thông tin còn thiếu trong prompt ban đầu.
+-  **Hoàn tác Tức thì (1-Click Undo)**: Toast thông báo góc màn hình cho phép khôi phục nguyên trạng prompt gốc bất cứ lúc nào.
+-  **Nhận diện Tác vụ Tự động (Task Classification)**: Tự động phân loại `code`, `writing`, `analysis`, `translation`, `general` để áp dụng cấu trúc meta-prompt chuyên biệt.
+-  **Bảo mật Secret qua Cloudflare Worker**: Gemini API Key được mã hóa và lưu an toàn trên Cloudflare Worker Secrets, hoàn toàn không bị lộ ở client extension.
+-  **Local SHA-256 Hash Cache**: Cache kết quả băm SHA-256 trên trình duyệt, phản hồi tức thì với các prompt quen thuộc và tiết kiệm API quota.
+-  **Modern Neo-Brutalism & Glassmorphism UI**: Giao diện nổi bật, hiện đại, đóng gói trong **Shadow DOM** chống xung đột CSS với website chủ.
+-  **Cơ chế Kháng Lỗi (Exponential Backoff)**: Tự động thử lại khi gặp giới hạn tần suất gọi API (HTTP 429).
 
 ---
 
-## 🏗️ Kiến Trúc Hệ Thống
+## Kiến Trúc Hệ Thống
 
 ```
 +-----------------------------------------------------------------------------------+
@@ -80,7 +80,7 @@ Khi người dùng soạn thảo, hệ thống tự động phân tích ngữ c�
 
 ---
 
-## 📁 Cấu Trúc Thư Mục Dự Án
+## Cấu Trúc Thư Mục Dự Án
 
 ```
 projectExtention/
@@ -92,7 +92,7 @@ projectExtention/
 │   └── README.md                     # Hướng dẫn chi tiết triển khai worker
 ├── src/                              # Phần 2: Chrome Extension Source Code (MV3)
 │   ├── background.js                 # Service worker: gọi API backend, retry 429, SHA-256 cache
-│   ├── content.js                    # Injected button ✨, modal xem trước, apply & undo
+│   ├── content.js                    # Injected button , modal xem trước, apply & undo
 │   ├── content.css                   # Styling cho nút, modal và undo toast (Shadow DOM)
 │   ├── popup.html / popup.js         # Màn hình cài đặt URL, site toggles, ping test, cache stats
 │   ├── popup.css                     # Giao diện popup phong cách hiện đại
@@ -114,7 +114,7 @@ projectExtention/
 
 ---
 
-## 🚀 Hướng Dẫn Cài Đặt & Triển Khai
+## Hướng Dẫn Cài Đặt & Triển Khai
 
 ### BƯỚC 1: Triển Khai Backend (Cloudflare Worker)
 
@@ -149,12 +149,12 @@ projectExtention/
 3. Nhấp nút **Load unpacked** (Tải tiện ích đã giải nén) và chọn thư mục `projectExtention`.
 4. Nhấp vào biểu tượng tiện ích trên thanh Toolbar:
    - Dán URL Backend từ Bước 1 vào mục **Backend URL**.
-   - Nhấp **Kiểm tra kết nối** để xác nhận trạng thái 🟢 **Online**.
+   - Nhấp **Kiểm tra kết nối** để xác nhận trạng thái  **Online**.
    - Nhấp **Lưu cấu hình**.
 
 ---
 
-## 🧪 Kiểm Thử (Testing)
+## Kiểm Thử (Testing)
 
 Dự án đi kèm bộ kiểm thử tự động toàn diện kiểm tra cú pháp, Manifest V3 và logic thuật toán:
 
@@ -174,20 +174,20 @@ node test/test_semantic_expander.js
 
 ---
 
-## 🛡️ Bảo Mật & Quyền Riêng Tư
+## Bảo Mật & Quyền Riêng Tư
 
-- 🔒 **Zero Hardcoded Secrets**: Toàn bộ API Key được bảo mật trên Cloudflare Secret Store, không đóng gói vào file extension client.
-- 🛡️ **Shadow DOM Isolation**: Toàn bộ CSS/JS của extension chạy độc lập trong Shadow Root, không can thiệp hay đọc trộm dữ liệu DOM ngoài ô nhập liệu.
-- 💾 **Client-Side Cache**: Cache prompt lưu cục bộ tại `chrome.storage.local`, không gửi dữ liệu người dùng về máy chủ thứ ba.
+-  **Zero Hardcoded Secrets**: Toàn bộ API Key được bảo mật trên Cloudflare Secret Store, không đóng gói vào file extension client.
+-  **Shadow DOM Isolation**: Toàn bộ CSS/JS của extension chạy độc lập trong Shadow Root, không can thiệp hay đọc trộm dữ liệu DOM ngoài ô nhập liệu.
+-  **Client-Side Cache**: Cache prompt lưu cục bộ tại `chrome.storage.local`, không gửi dữ liệu người dùng về máy chủ thứ ba.
 
 ---
 
-## 📄 Giấy Phép (License)
+## Giấy Phép (License)
 
 Dự án được phát hành theo giấy phép [MIT License](LICENSE). Tự do sử dụng, chỉnh sửa và tích hợp cho các mục đích cá nhân và thương mại.
 
 ---
 
 <div align="center">
-  <sub>Xây dựng với ❤️ và tinh thần mã nguồn mở bởi đội ngũ phát triển.</sub>
+  <sub>Xây dựng với và tinh thần mã nguồn mở bởi đội ngũ phát triển.</sub>
 </div>
