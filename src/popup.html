@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prompt Improver — ChatGPT &amp; Claude</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="pi-app">
+
+    <!-- ── HEADER ───────────────────────────────────────────── -->
+    <header class="pi-header">
+      <div class="pi-logo">
+        <span class="pi-logo-icon">✨</span>
+        <div>
+          <h1>Prompt Improver</h1>
+          <span class="pi-version" id="txtVersion">v1.3.0</span>
+        </div>
+      </div>
+      <div class="pi-status-indicator" id="serverStatusBadge">
+        <span class="pi-status-dot"></span>
+        <span id="serverStatusText">Chưa kiểm tra</span>
+      </div>
+    </header>
+
+    <!-- ── TAB 1: CẤU HÌNH (SETTINGS) ──────────────────────── -->
+    <section id="tab-settings" class="pi-tab-pane active">
+
+      <!-- Backend URL Card -->
+      <div class="pi-card">
+        <h3 class="pi-card-title">🌐 Cloudflare Worker Backend URL</h3>
+        <p class="pi-card-desc">Nhập URL Worker bạn đã deploy.</p>
+        <div class="pi-input-group">
+          <input
+            type="url"
+            id="inputBackendUrl"
+            placeholder="https://prompt-improver-backend.xxx.workers.dev"
+            spellcheck="false"
+          >
+        </div>
+        <div class="pi-btn-row">
+          <button id="btnPingBackend" class="pi-btn pi-btn-secondary">🔍 Kiểm tra kết nối</button>
+          <button id="btnSaveSettings" class="pi-btn pi-btn-primary">💾 Lưu cấu hình</button>
+        </div>
+        <div id="pingResult" class="pi-alert-box" style="display: none;"></div>
+      </div>
+
+      <!-- Site Toggles Card -->
+      <div class="pi-card">
+        <h3 class="pi-card-title">🎯 Bật/Tắt trên từng trang web</h3>
+        <div class="pi-toggle-list" id="siteTogglesList">
+          <!-- Dynamically Rendered Site Toggles -->
+        </div>
+      </div>
+
+      <!-- Cache Management Card -->
+      <div class="pi-card">
+        <h3 class="pi-card-title">⚡ Quản lý Cache (SHA-256 Hash)</h3>
+        <p class="pi-card-desc">Tự động lưu tạm kết quả prompt để tránh gọi lại API khi bấm trùng prompt.</p>
+        <div class="pi-checkbox-row">
+          <label class="pi-checkbox-label">
+            <input type="checkbox" id="chkEnableCache" checked>
+            Bật tính năng Cache kết quả
+          </label>
+          <span class="pi-badge-sm" id="txtCacheCount">0 mục</span>
+        </div>
+        <button id="btnClearCache" class="pi-btn-danger-sm">🗑️ Xóa toàn bộ Cache</button>
+      </div>
+
+    </section>
+
+    <!-- ── TAB 2: THỬ NGHIỆM NHANH (QUICK TEST) ─────────────── -->
+    <section id="tab-quick-test" class="pi-tab-pane">
+
+      <div class="pi-card">
+        <h3 class="pi-card-title">📝 Prompt gốc</h3>
+        <textarea
+          id="testPromptInput"
+          placeholder="Nhập prompt cần cải thiện thử nghiệm tại đây..."
+          rows="4"
+        ></textarea>
+        <div class="pi-btn-row" style="margin-top: 10px;">
+          <button id="btnRunTest" class="pi-btn pi-btn-primary" style="width: 100%;">
+            ⚡ Cải thiện ngay
+          </button>
+        </div>
+        <div id="testAlert" class="pi-alert-box" style="display: none;"></div>
+      </div>
+
+      <!-- Kết quả thử nghiệm -->
+      <div id="testResultBox" style="display: none;">
+        <!-- Minimal Version -->
+        <div class="pi-card pi-card-minimal">
+          <div class="pi-card-header-flex">
+            <strong style="font-family: var(--font-headline); font-size: 13px;">⚡ Phiên bản Tối giản</strong>
+            <button class="pi-btn-copy-sm" id="btnCopyTestMin">📋 Sao chép</button>
+          </div>
+          <div class="pi-code-preview" id="testMinText"></div>
+        </div>
+
+        <!-- Detailed Version -->
+        <div class="pi-card pi-card-detailed">
+          <div class="pi-card-header-flex">
+            <strong style="font-family: var(--font-headline); font-size: 13px;">🎯 Phiên bản Chi tiết</strong>
+            <button class="pi-btn-copy-sm" id="btnCopyTestDet">📋 Sao chép</button>
+          </div>
+          <div class="pi-code-preview" id="testDetText"></div>
+        </div>
+
+        <!-- Assumptions -->
+        <div id="testAssumptionsBox" class="pi-card pi-card-warn" style="display: none;">
+          <strong style="font-family: var(--font-headline); font-size: 12px; color: var(--primary);">💡 Các giả định làm rõ:</strong>
+          <ul id="testAssumptionsList" class="pi-list-clean"></ul>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── TAB 3: LỊCH SỬ (HISTORY) ─────────────────────────── -->
+    <section id="tab-history" class="pi-tab-pane">
+      <div class="pi-card-header-flex" style="margin-bottom: 12px;">
+        <span class="pi-card-desc" style="margin-bottom: 0;">Lưu tối đa 50 prompt gần nhất</span>
+        <button id="btnClearHistory" class="pi-btn-link text-danger">✕ Xóa tất cả</button>
+      </div>
+      <div id="historyListContainer" class="pi-history-list">
+        <!-- Rendered History -->
+      </div>
+    </section>
+
+    <!-- ── FOOTER ─────────────────────────────────────────────── -->
+    <footer class="pi-footer">
+      <span>Prompt Improver • Gemini Free Tier • Manifest V3</span>
+    </footer>
+
+    <!-- ── BOTTOM NAV ─────────────────────────────────────────── -->
+    <nav class="pi-tabs">
+      <button class="pi-tab-btn active" data-tab="settings">
+        <span class="tab-icon">⚙️</span>
+        Cấu hình
+      </button>
+      <button class="pi-tab-btn" data-tab="quick-test">
+        <span class="tab-icon">⚡</span>
+        Thử nhanh
+      </button>
+      <button class="pi-tab-btn" data-tab="history">
+        <span class="tab-icon">📜</span>
+        Lịch sử
+      </button>
+    </nav>
+
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+name = "prompt-improver-backend"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+# [vars]
+# Không đặt GEMINI_API_KEY ở đây!
+# Sử dụng: wrangler secret put GEMINI_API_KEY

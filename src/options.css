@@ -1,0 +1,461 @@
+/**
+ * options.css — Prompt Improver Options Page Styling
+ * Theme: Warm Neo-Brutalism — hard shadows, espresso borders, amber accents, cream surfaces.
+ */
+
+/* ─── FONT FACE (self-hosted, MV3 CSP-safe) ──────────────────────────────── */
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../assets/fonts/SpaceGrotesk-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../assets/fonts/SpaceGrotesk-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../assets/fonts/SpaceGrotesk-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('../assets/fonts/Inter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('../assets/fonts/Inter-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+
+/* ─── DESIGN TOKENS ───────────────────────────────────────────────────────── */
+:root {
+  --surface: #FFFBEB;
+  --surface-container-lowest: #ffffff;
+  --background: #FAF7F2;
+  --sand: #F3E9DC;
+  --primary: #855300;
+  --primary-container: #f59e0b;
+  --on-primary-container: #613b00;
+  --espresso: #0A0A0F;
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  --on-surface: #1b1b20;
+  --on-surface-variant: #534434;
+  --outline: #867461;
+  --outline-variant: #d8c3ad;
+  --terracotta: #E25822;
+  --accent-green: #166534;
+  --accent-green-bg: #d1fae5;
+  --accent-blue-bg: #e0f2fe;
+  --accent-blue: #0369a1;
+
+  --font-headline: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --border: 2px solid #0A0A0F;
+  --shadow: 4px 4px 0px #0A0A0F;
+  --shadow-hover: 6px 6px 0px #0A0A0F;
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-md: 12px;
+}
+
+/* ─── RESET ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── BODY ────────────────────────────────────────────────────────────────── */
+body {
+  background-color: var(--background);
+  color: var(--espresso);
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 32px 20px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ─── CONTAINER ───────────────────────────────────────────────────────────── */
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ─── HEADER ──────────────────────────────────────────────────────────────── */
+.header {
+  border-bottom: var(--border);
+  padding-bottom: 20px;
+  margin-bottom: 4px;
+}
+
+.logo-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.logo-group .icon {
+  font-size: 28px;
+}
+
+.logo-group h1 {
+  font-family: var(--font-headline);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-family: var(--font-body);
+  color: var(--on-surface-variant);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* ─── CARD ────────────────────────────────────────────────────────────────── */
+.card {
+  background-color: var(--surface-container-lowest);
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.card h2 {
+  font-family: var(--font-headline);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--espresso);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card .desc {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--on-surface-variant);
+  line-height: 1.6;
+}
+
+.card .desc code {
+  background: var(--sand);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--outline-variant);
+  font-size: 12px;
+}
+
+.card .desc a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ─── FORM GROUPS ─────────────────────────────────────────────────────────── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-family: var(--font-headline);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--espresso);
+}
+
+.form-group input,
+.form-group select,
+textarea {
+  background-color: var(--sand);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  color: var(--espresso);
+  font-family: var(--font-body);
+  font-size: 13px;
+  outline: none;
+  transition: background 0.15s ease;
+  width: 100%;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+textarea:focus {
+  background: var(--surface-container-lowest);
+  border-color: var(--primary-container);
+}
+
+.form-group input::placeholder,
+textarea::placeholder {
+  color: var(--outline);
+}
+
+.form-group small {
+  font-family: var(--font-body);
+  color: var(--on-surface-variant);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border: var(--border);
+  border-radius: 3px;
+  background: var(--surface-container-lowest);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--primary-container);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--on-primary-container);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ─── BUTTONS ─────────────────────────────────────────────────────────────── */
+.btn-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 18px;
+  font-family: var(--font-headline);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: var(--border);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translate(-2px, -2px);
+}
+
+.btn:active {
+  box-shadow: 0px 0px 0px var(--espresso) !important;
+  transform: translate(4px, 4px) !important;
+}
+
+.btn-primary {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.btn-secondary {
+  background: var(--surface-container-lowest);
+  color: var(--espresso);
+}
+
+.btn-secondary:hover {
+  background: var(--sand);
+}
+
+.btn-danger {
+  background: var(--error-container);
+  color: var(--on-error-container);
+}
+
+.btn-danger:hover {
+  background: var(--error);
+  color: #ffffff;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: var(--surface-container-lowest);
+  color: var(--espresso);
+  border: var(--border);
+  box-shadow: 2px 2px 0px var(--espresso);
+}
+
+.btn-sm:hover {
+  box-shadow: 3px 3px 0px var(--espresso);
+  transform: translate(-1px, -1px);
+}
+
+.btn-sm:active {
+  box-shadow: 0px 0px 0px var(--espresso) !important;
+  transform: translate(2px, 2px) !important;
+}
+
+.btn-file {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* ─── CARD HEADER FLEX ────────────────────────────────────────────────────── */
+.card-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-group-sm {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── TEMPLATE CREATE BOX ─────────────────────────────────────────────────── */
+.template-create-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--sand);
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  border: var(--border);
+}
+
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.template-list::-webkit-scrollbar { width: 4px; }
+.template-list::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 4px; }
+
+/* ─── TEMPLATE ITEM (JS-referenced class — must be preserved) ─────────────── */
+.template-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface-container-lowest);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: var(--border);
+  box-shadow: 2px 2px 0px var(--espresso);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.template-item:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--espresso);
+}
+
+/* JS-referenced class — must be preserved */
+.template-item-title {
+  font-family: var(--font-headline);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--espresso);
+}
+
+/* ─── STATUS MESSAGE (JS-referenced: .status-msg, .success, .error) ──────── */
+.status-msg {
+  font-family: var(--font-headline);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: var(--border);
+  display: none;
+  box-shadow: 2px 2px 0px var(--espresso);
+}
+
+.status-msg.success {
+  display: block;
+  background: var(--accent-green-bg);
+  color: var(--accent-green);
+}
+
+.status-msg.error {
+  display: block;
+  background: var(--error-container);
+  color: var(--on-error-container);
+}
+
+/* ─── PRIVACY CARD ────────────────────────────────────────────────────────── */
+.privacy-card {
+  background: var(--sand);
+  border-left: 4px solid var(--primary-container);
+}
+
+.privacy-card h3 {
+  font-family: var(--font-headline);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.privacy-card ul {
+  padding-left: 20px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--on-surface-variant);
+  line-height: 1.7;
+}
+
+.privacy-card code {
+  background: var(--surface-container-lowest);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--outline-variant);
+  font-size: 11px;
+}
+
+/* ─── STATUS BADGE ────────────────────────────────────────────────────────── */
+#keyStatus { margin-top: 4px; }
+#prefStatus { margin-top: 4px; }

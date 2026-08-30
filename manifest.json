@@ -1,0 +1,76 @@
+{
+  "manifest_version": 3,
+  "name": "Prompt Improver — AI Prompt Optimizer",
+  "version": "1.3.0",
+  "description": "Tự động chèn nút ✨ Cải thiện vào ChatGPT, Claude.ai, Gemini, DeepSeek, Perplexity, Copilot. Gọi Gemini API tạo 2 phiên bản (Tối giản / Chi tiết), hoàn tác 1-click, cache thông minh.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://aistudio.google.com/*",
+    "https://perplexity.ai/*",
+    "https://phind.com/*",
+    "https://poe.com/*",
+    "https://chat.deepseek.com/*",
+    "https://copilot.microsoft.com/*",
+    "https://*.workers.dev/*",
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Prompt Improver — Gemini Free Tier",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://aistudio.google.com/*",
+        "https://bard.google.com/*",
+        "https://perplexity.ai/*",
+        "https://phind.com/*",
+        "https://poe.com/*",
+        "https://chat.deepseek.com/*",
+        "https://copilot.microsoft.com/*",
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": ["src/content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/content.css",
+        "assets/fonts/SpaceGrotesk-Regular.woff2",
+        "assets/fonts/SpaceGrotesk-SemiBold.woff2",
+        "assets/fonts/SpaceGrotesk-Bold.woff2",
+        "assets/fonts/Inter-Regular.woff2",
+        "assets/fonts/Inter-SemiBold.woff2",
+        "assets/icon16.png",
+        "assets/icon48.png",
+        "assets/icon128.png"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

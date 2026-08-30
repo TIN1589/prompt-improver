@@ -1,0 +1,20 @@
+{
+  "name": "claude-code-prompt-optimizer",
+  "version": "1.0.0",
+  "description": "Local-first browser extension for optimizing prompts and reducing token usage in Claude Code free tier.",
+  "type": "module",
+  "scripts": {
+    "test": "node test/test_optimizer.js",
+    "icons": "node generate_icons.js"
+  },
+  "keywords": [
+    "claude-code",
+    "prompt-engineering",
+    "token-optimization",
+    "chrome-extension",
+    "manifest-v3",
+    "local-first"
+  ],
+  "author": "Antigravity Architect",
+  "license": "MIT"
+}

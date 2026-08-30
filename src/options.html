@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cài đặt — Prompt Improver</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+
+    <!-- ── HEADER ──────────────────────────────────────────── -->
+    <header class="header">
+      <div class="logo-group">
+        <span class="icon">⚡</span>
+        <h1>Prompt Improver — Cài đặt</h1>
+      </div>
+      <p class="subtitle">Quản lý Google AI Studio API Key, Chế độ mặc định và Template</p>
+    </header>
+
+    <!-- ── Card 1: API Key & Encryption ─────────────────────── -->
+    <div class="card">
+      <h2>🔐 Cấu hình Google AI Studio API Key (Mã hóa Local)</h2>
+      <p class="desc">
+        Lấy API Key miễn phí tại <strong><a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a></strong>.<br>
+        Key được mã hóa <strong>AES-GCM 256-bit (PBKDF2)</strong> và lưu tại <code>chrome.storage.local</code> — không bao giờ gửi ra ngoài ngoài <code>generativelanguage.googleapis.com</code>.
+      </p>
+
+      <div class="form-group">
+        <label for="apiKey">Google AI Studio API Key (AIza...):</label>
+        <input type="password" id="apiKey" placeholder="AIzaSy... (lấy từ aistudio.google.com/app/apikey)">
+      </div>
+
+      <div class="form-group">
+        <label for="passphrase">Mật khẩu bảo vệ (Passphrase):</label>
+        <input type="password" id="passphrase" placeholder="Nhập mật khẩu để mã hóa/giải mã API Key">
+        <small>Lưu ý: Mật khẩu này không được lưu ở bất kỳ đâu. Bạn sẽ cần nhập lại khi gọi API từ popup.</small>
+      </div>
+
+      <div class="btn-row">
+        <button id="btnSaveApiKey" class="btn btn-primary">🔒 Mã hóa &amp; Lưu API Key</button>
+        <button id="btnRemoveApiKey" class="btn btn-danger">🗑️ Xóa API Key đã lưu</button>
+      </div>
+      <div id="keyStatus" class="status-msg"></div>
+    </div>
+
+    <!-- ── Card 2: Compression Preferences ──────────────────── -->
+    <div class="card">
+      <h2>⚙️ Tùy chọn Tối ưu hóa</h2>
+
+      <div class="form-group">
+        <label for="defaultMode">Chế độ tối ưu mặc định:</label>
+        <select id="defaultMode">
+          <option value="conservative">Bảo tồn (Conservative) — Giữ ngữ cảnh tối đa (~20-30% giảm)</option>
+          <option value="balanced" selected>Cân bằng (Balanced) — Tối ưu tiêu chuẩn (~40-60% giảm)</option>
+          <option value="aggressive">Cực đại (Aggressive) — Rút gọn tối đa dạng Slot (~60-75% giảm)</option>
+        </select>
+      </div>
+
+      <div class="form-group checkbox-group">
+        <label>
+          <input type="checkbox" id="enableContextMenu" checked>
+          Bật menu chuột phải "Tối ưu hóa đoạn văn bản bôi đen"
+        </label>
+      </div>
+
+      <button id="btnSavePreferences" class="btn btn-secondary">💾 Lưu Tùy chọn</button>
+      <div id="prefStatus" class="status-msg"></div>
+    </div>
+
+    <!-- ── Card 3: Custom Templates Manager ─────────────────── -->
+    <div class="card">
+      <div class="card-header-flex">
+        <h2>📑 Quản lý Custom Templates</h2>
+        <div class="btn-group-sm">
+          <button id="btnExportTemplates" class="btn btn-sm">⬆️ Xuất JSON</button>
+          <label class="btn btn-sm btn-file">
+            ⬇️ Nhập JSON <input type="file" id="fileImportTemplates" accept=".json" style="display:none;">
+          </label>
+        </div>
+      </div>
+
+      <div class="template-create-box">
+        <input type="text" id="tplTitle" placeholder="Tên Template (VD: Refactor hàm TypeScript)">
+        <textarea id="tplContent" rows="3" placeholder="Nội dung template mẫu... Dùng {concept}, {context}, {constraints}"></textarea>
+        <button id="btnAddTemplate" class="btn btn-primary">➕ Thêm Template mới</button>
+      </div>
+
+      <div id="templateList" class="template-list">
+        <!-- Templates Rendered Here -->
+      </div>
+    </div>
+
+    <!-- ── Privacy & Audit Box ───────────────────────────────── -->
+    <div class="card privacy-card">
+      <h3>🛡️ Cam kết Quyền riêng tư &amp; Bảo mật Local-First</h3>
+      <ul>
+        <li>Tất cả thuật toán nén và mở rộng prompt chạy 100% local trong trình duyệt — không cần API key.</li>
+        <li>Extension <strong>không</strong> chứa mã theo dõi (analytics/telemetry), không có server trung gian.</li>
+        <li>Chỉ gửi dữ liệu đến <code>generativelanguage.googleapis.com</code> khi bạn chủ động nhấn nút "Gửi Gemini API".</li>
+        <li>Free tier: <strong>15 requests/phút</strong>, 1.500 req/ngày với <code>gemini-2.0-flash</code>.</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

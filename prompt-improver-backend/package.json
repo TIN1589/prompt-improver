@@ -1,0 +1,22 @@
+{
+  "name": "prompt-improver-backend",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker Backend for Prompt Improver Chrome Extension (Gemini API Free Tier)",
+  "main": "worker.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "keywords": [
+    "cloudflare-worker",
+    "gemini-api",
+    "prompt-engineering",
+    "prompt-improver"
+  ],
+  "author": "Antigravity Architect",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

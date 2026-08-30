@@ -1,0 +1,564 @@
+/**
+ * content.css — Prompt Improver Styling (Shadow DOM & Host UI)
+ * Theme: Warm Neo-Brutalism — hard shadows, espresso borders, amber accents, cream surfaces.
+ * Scoped inside Shadow Root — no host page leakage.
+ * NOTE: Fonts are injected dynamically via chrome.runtime.getURL() by content.js
+ */
+
+/* ─── TOKENS (:host = Shadow DOM root) ───────────────────────────────────── */
+:host, .pi-root {
+  --pi-surface: #FFFBEB;
+  --pi-surface-lowest: #ffffff;
+  --pi-background: #FAF7F2;
+  --pi-sand: #F3E9DC;
+  --pi-primary: #855300;
+  --pi-primary-container: #f59e0b;
+  --pi-on-primary-container: #613b00;
+  --pi-espresso: #0A0A0F;
+  --pi-secondary-container: #fe7488;
+  --pi-terracotta: #E25822;
+  --pi-error: #ba1a1a;
+  --pi-error-container: #ffdad6;
+  --pi-on-error-container: #93000a;
+  --pi-on-surface: #1b1b20;
+  --pi-on-surface-variant: #534434;
+  --pi-outline: #867461;
+  --pi-outline-variant: #d8c3ad;
+  --pi-accent-green: #4ADE80;
+  --pi-accent-amber: #f59e0b;
+
+  --pi-font: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --pi-font-body: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  --pi-border: 2px solid #0A0A0F;
+  --pi-shadow: 4px 4px 0px #0A0A0F;
+  --pi-shadow-hover: 6px 6px 0px #0A0A0F;
+  --pi-radius: 8px;
+  --pi-radius-sm: 4px;
+  --pi-radius-lg: 12px;
+
+  font-family: var(--pi-font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--pi-espresso);
+  box-sizing: border-box;
+}
+
+/* ─── RESET in Shadow DOM ─────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* INJECTED BUTTON — appears on host page toolbar                              */
+/* ─────────────────────────────────────────────────────────────────────────── */
+.pi-inject-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px;
+  margin: 0 4px;
+  font-family: var(--pi-font);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pi-on-primary-container);
+  background: var(--pi-primary-container);
+  border: var(--pi-border);
+  border-radius: var(--pi-radius);
+  cursor: pointer;
+  box-shadow: var(--pi-shadow);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+  vertical-align: middle;
+  outline: none;
+  box-sizing: border-box;
+  letter-spacing: 0.01em;
+}
+
+.pi-inject-btn:hover {
+  box-shadow: var(--pi-shadow-hover);
+  transform: translate(-2px, -2px);
+}
+
+.pi-inject-btn:active {
+  box-shadow: 0px 0px 0px var(--pi-espresso) !important;
+  transform: translate(4px, 4px);
+}
+
+.pi-inject-btn .pi-sparkle {
+  font-size: 13px;
+  animation: pi-pulse 2s infinite ease-in-out;
+}
+
+@keyframes pi-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* FLOATING TOAST NOTIFICATION                                                 */
+/* ─────────────────────────────────────────────────────────────────────────── */
+.pi-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--pi-surface);
+  border: var(--pi-border);
+  border-radius: var(--pi-radius);
+  box-shadow: var(--pi-shadow);
+  color: var(--pi-espresso);
+  font-family: var(--pi-font);
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 2147483647;
+  animation: pi-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+.pi-toast.pi-toast-warning {
+  border-left: 4px solid var(--pi-primary-container);
+  background: #FFFBEB;
+}
+
+.pi-toast-undo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--pi-error-container);
+  border: var(--pi-border);
+  color: var(--pi-on-error-container);
+  border-radius: var(--pi-radius-sm);
+  font-family: var(--pi-font);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px var(--pi-espresso);
+  transition: all 0.15s ease;
+}
+
+.pi-toast-undo-btn:hover {
+  background: var(--pi-error);
+  color: #ffffff;
+}
+
+.pi-toast-undo-btn:active {
+  box-shadow: 0px 0px 0px var(--pi-espresso);
+  transform: translate(2px, 2px);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* MODAL OVERLAY & DIALOG                                                      */
+/* ─────────────────────────────────────────────────────────────────────────── */
+.pi-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 15, 0.55);
+  z-index: 2147483646;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: pi-fade-in 0.2s ease;
+  pointer-events: auto;
+}
+
+.pi-modal {
+  width: 100%;
+  max-width: 880px;
+  max-height: 90vh;
+  background: var(--pi-surface);
+  border: var(--pi-border);
+  border-radius: var(--pi-radius-lg);
+  box-shadow: var(--pi-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: pi-zoom-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── HEADER ──────────────────────────────────────────────────────────────── */
+.pi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: var(--pi-border);
+  background: var(--pi-sand);
+  flex-shrink: 0;
+}
+
+.pi-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pi-title {
+  margin: 0;
+  font-family: var(--pi-font);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--pi-primary);
+  letter-spacing: -0.01em;
+}
+
+.pi-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-family: var(--pi-font);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--pi-primary-container);
+  border: 1px solid var(--pi-espresso);
+  color: var(--pi-on-primary-container);
+}
+
+.pi-badge-cached {
+  background: #d1fae5;
+  border-color: var(--pi-espresso);
+  color: #065f46;
+}
+
+.pi-btn-close {
+  background: var(--pi-surface-lowest);
+  border: var(--pi-border);
+  color: var(--pi-espresso);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: var(--pi-radius-sm);
+  box-shadow: 2px 2px 0px var(--pi-espresso);
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.pi-btn-close:hover {
+  background: var(--pi-sand);
+  box-shadow: 3px 3px 0px var(--pi-espresso);
+  transform: translate(-1px, -1px);
+}
+
+.pi-btn-close:active {
+  box-shadow: 0px 0px 0px var(--pi-espresso);
+  transform: translate(2px, 2px);
+}
+
+/* ─── BODY CONTENT ────────────────────────────────────────────────────────── */
+.pi-body {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--pi-background);
+  scrollbar-width: thin;
+  scrollbar-color: var(--pi-outline-variant) transparent;
+}
+
+.pi-body::-webkit-scrollbar { width: 5px; }
+.pi-body::-webkit-scrollbar-thumb { background: var(--pi-outline-variant); border-radius: 4px; }
+
+/* Original Prompt Preview */
+.pi-original-box {
+  background: var(--pi-sand);
+  border: var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--pi-on-surface-variant);
+}
+
+.pi-original-box summary {
+  cursor: pointer;
+  font-family: var(--pi-font);
+  font-weight: 600;
+  color: var(--pi-primary);
+  user-select: none;
+  outline: none;
+}
+
+.pi-original-text {
+  margin-top: 8px;
+  white-space: pre-wrap;
+  color: var(--pi-espresso);
+  font-family: var(--pi-font-body);
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* Comparison Grid (2 Cards) */
+.pi-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 720px) {
+  .pi-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── CARDS ───────────────────────────────────────────────────────────────── */
+.pi-card {
+  background: var(--pi-surface-lowest);
+  border: var(--pi-border);
+  border-radius: var(--pi-radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--pi-shadow);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.pi-card:hover {
+  box-shadow: var(--pi-shadow-hover);
+  transform: translate(-2px, -2px);
+}
+
+.pi-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.pi-card-title {
+  font-family: var(--pi-font);
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--pi-espresso);
+}
+
+/* Minimal card — amber accent */
+.pi-card-minimal {
+  border-left: 4px solid var(--pi-primary-container);
+}
+.pi-card-minimal .pi-card-title {
+  color: var(--pi-on-primary-container);
+}
+
+/* Detailed card — terracotta accent */
+.pi-card-detailed {
+  border-left: 4px solid var(--pi-terracotta);
+}
+.pi-card-detailed .pi-card-title {
+  color: var(--pi-terracotta);
+}
+
+.pi-card-stats {
+  font-family: var(--pi-font-body);
+  font-size: 11px;
+  color: var(--pi-on-surface-variant);
+  background: var(--pi-sand);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid var(--pi-outline-variant);
+}
+
+.pi-card-text {
+  font-family: var(--pi-font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--pi-espresso);
+  white-space: pre-wrap;
+  background: var(--pi-sand);
+  border-radius: var(--pi-radius-sm);
+  padding: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: var(--pi-border);
+  margin-bottom: 14px;
+}
+
+.pi-card-text::-webkit-scrollbar { width: 4px; }
+.pi-card-text::-webkit-scrollbar-thumb { background: var(--pi-outline-variant); border-radius: 4px; }
+
+.pi-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── BUTTONS ─────────────────────────────────────────────────────────────── */
+.pi-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--pi-radius-sm);
+  font-family: var(--pi-font);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  border: var(--pi-border);
+  box-shadow: 2px 2px 0px var(--pi-espresso);
+  letter-spacing: 0.01em;
+}
+
+.pi-btn:active {
+  box-shadow: 0px 0px 0px var(--pi-espresso) !important;
+  transform: translate(2px, 2px);
+}
+
+.pi-btn-copy {
+  background: var(--pi-surface-lowest);
+  color: var(--pi-espresso);
+}
+
+.pi-btn-copy:hover {
+  background: var(--pi-sand);
+  box-shadow: 3px 3px 0px var(--pi-espresso);
+  transform: translate(-1px, -1px);
+}
+
+.pi-btn-apply {
+  background: var(--pi-primary-container);
+  color: var(--pi-on-primary-container);
+  box-shadow: var(--pi-shadow);
+}
+
+.pi-btn-apply:hover {
+  box-shadow: var(--pi-shadow-hover);
+  transform: translate(-2px, -2px);
+}
+
+/* Error close button */
+.pi-btn-error-close {
+  background: var(--pi-error-container);
+  color: var(--pi-on-error-container);
+}
+
+.pi-btn-error-close:hover {
+  background: var(--pi-error);
+  color: #ffffff;
+}
+
+/* ─── ASSUMPTIONS LIST ────────────────────────────────────────────────────── */
+.pi-assumptions-box {
+  background: #FFFBEB;
+  border: var(--pi-border);
+  border-left: 4px solid var(--pi-primary-container);
+  border-radius: var(--pi-radius-sm);
+  padding: 12px 14px;
+  box-shadow: 2px 2px 0px var(--pi-espresso);
+}
+
+.pi-assumptions-title {
+  font-family: var(--pi-font);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pi-primary);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pi-assumptions-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--pi-on-surface-variant);
+  font-family: var(--pi-font-body);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.pi-assumptions-list li {
+  margin-bottom: 4px;
+}
+
+/* ─── SKELETON / LOADING ──────────────────────────────────────────────────── */
+.pi-skeleton-box {
+  padding: 36px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: var(--pi-surface);
+}
+
+.pi-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--pi-outline-variant);
+  border-top-color: var(--pi-primary-container);
+  border-radius: 50%;
+  animation: pi-spin 0.8s linear infinite;
+}
+
+.pi-loading-text {
+  font-family: var(--pi-font);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--pi-espresso);
+  text-align: center;
+}
+
+.pi-loading-subtext {
+  font-family: var(--pi-font-body);
+  font-size: 12px;
+  color: var(--pi-on-surface-variant);
+  text-align: center;
+  max-width: 340px;
+  line-height: 1.5;
+}
+
+/* ─── ERROR STATE ─────────────────────────────────────────────────────────── */
+.pi-error-box {
+  background: var(--pi-error-container);
+  border: var(--pi-border);
+  border-left: 4px solid var(--pi-error);
+  border-radius: var(--pi-radius-sm);
+  padding: 16px;
+  color: var(--pi-on-error-container);
+  box-shadow: 2px 2px 0px var(--pi-espresso);
+}
+
+.pi-error-box h4 {
+  margin: 0 0 8px 0;
+  font-family: var(--pi-font);
+  font-weight: 700;
+  color: var(--pi-error);
+}
+
+/* ─── ANIMATIONS ──────────────────────────────────────────────────────────── */
+@keyframes pi-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pi-zoom-in {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes pi-slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pi-spin {
+  to { transform: rotate(360deg); }
+}

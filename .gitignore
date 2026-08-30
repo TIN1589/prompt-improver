@@ -1,0 +1,73 @@
+# ==========================================
+# 1. BẢO MẬT & BIẾN MÔI TRƯỜNG (CRITICAL)
+# ==========================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.pfx
+secrets.*
+credentials.json
+
+# ==========================================
+# 2. DEPENDENCIES & PACKAGE MANAGERS
+# ==========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnp
+.pnp.js
+
+# Python (nếu có script phụ trợ)
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# ==========================================
+# 3. BUILD ARTIFACTS, SERVERLESS & CACHE
+# ==========================================
+dist/
+build/
+out/
+.cache/
+*.tsbuildinfo
+
+# Cloudflare Workers & Wrangler
+.wrangler/
+.mf/
+.dev.vars
+
+# ==========================================
+# 4. TRÌNH SOẠN THẢO & HỆ ĐIỀU HÀNH
+# ==========================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
