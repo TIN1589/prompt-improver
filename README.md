@@ -26,7 +26,7 @@
 
 ## Tổng Quan Dự Án
 
-**Prompt Improver** là một giải pháp mở rộng trình duyệt (Chrome Extension MV3) kết hợp cùng Serverless Edge Backend (Cloudflare Workers). Tiện ích tự động tích hợp nút **"✨ Cải thiện"** trực tiếp vào giao diện của các nền tảng AI hàng đầu như **ChatGPT**, **Claude.ai**, **Google Gemini**, **Perplexity**, **DeepSeek**, **Copilot**... 
+**Prompt Improver** là một giải pháp mở rộng trình duyệt (Chrome Extension MV3) kết hợp cùng Serverless Edge Backend (Cloudflare Workers). Tiện ích tự động tích hợp nút **"Cải thiện"** trực tiếp vào giao diện của các nền tảng AI hàng đầu như **ChatGPT**, **Claude.ai**, **Google Gemini**, **Perplexity**, **DeepSeek**, **Copilot**... 
 
 Khi người dùng soạn thảo, hệ thống tự động phân tích ngữ cảnh, phân loại tác vụ và gọi Google Gemini AI để sinh ra **2 phiên bản prompt tối ưu hóa** (Tối giản & Chi tiết) cùng danh sách các **Giả định ngầm định (Assumptions)**, giúp người dùng nhận được câu trả lời chất lượng cao nhất từ AI mà không tốn công gõ prompt dài dòng.
 
@@ -49,36 +49,37 @@ Khi người dùng soạn thảo, hệ thống tự động phân tích ngữ c�
 
 ## Kiến Trúc Hệ Thống
 
-```
-+-----------------------------------------------------------------------------------+
-|                            TRÌNH DUYỆT (CHROME CLIENT)                            |
-|                                                                                   |
-|  [ ChatGPT / Claude / Gemini Web UI ]                                            |
-|        │                                                                          |
-|        ▼ (Injected via Shadow DOM)                                               |
-|  [ Content Script: content.js ] ───> [ Nút ✨ Cải Thiện & Modal Xem Trước ]       |
-|        │                                                                          |
-|        ▼ (chrome.runtime.sendMessage)                                             |
-|  [ Background Service Worker: background.js ]                                     |
-|        ├── SHA-256 Hash Cache Storage                                            |
-|        └── Exponential Backoff Retry (429 Handler)                               |
-+────────────────────────────────────────┬──────────────────────────────────────────+
-                                         │ HTTPS (POST /improve)
-                                         ▼
-+-----------------------------------------------------------------------------------+
-|                     SERVERLESS BACKEND (CLOUDFLARE WORKERS)                       |
-|                                                                                   |
-|  [ worker.js ]                                                                    |
-|        ├── CORS & Rate Limit Middleware                                           |
-|        ├── Task Classifier (Code / Writing / Analysis / Translation / General)   |
-|        └── Meta-Prompt Synthesis Engine                                           |
-|                     │                                                             |
-|                     ▼ (Secured via Worker Secrets)                                |
-|        [ Google Gemini 2.0 Flash API (Free / Pro Tier) ]                          |
-+-----------------------------------------------------------------------------------+
+```mermaid
+graph TD
+    subgraph Browser["TRÌNH DUYỆT (CHROME CLIENT)"]
+        UI["ChatGPT / Claude / Gemini Web UI"]
+        CS["Content Script: content.js<br/>Nút Cải Thiện and Modal Xem Trước"]
+        BG["Background Service Worker: background.js"]
+        HASH[("SHA-256 Hash Cache Storage")]
+        RETRY["Exponential Backoff Retry<br/>(429 Handler)"]
+
+        UI -->|"Injected via Shadow DOM"| CS
+        CS -->|"chrome.runtime.sendMessage"| BG
+        BG --- HASH
+        BG --- RETRY
+    end
+
+    subgraph Backend["SERVERLESS BACKEND (CLOUDFLARE WORKERS)"]
+        WORKER["worker.js"]
+        CORS["CORS and Rate Limit Middleware"]
+        CLASSIFIER["Task Classifier<br/>(Code / Writing / Analysis / Translation / General)"]
+        META["Meta-Prompt Synthesis Engine"]
+        GEMINI["Google Gemini 2.5 Flash API<br/>(Free / Pro Tier)"]
+
+        WORKER --- CORS
+        WORKER --- CLASSIFIER
+        WORKER --- META
+        META -->|"Secured via Worker Secrets"| GEMINI
+    end
+
+    BG -->|"HTTPS (POST /improve)"| WORKER
 ```
 
----
 
 ## Cấu Trúc Thư Mục Dự Án
 
