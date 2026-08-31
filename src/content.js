@@ -1,17 +1,18 @@
 /**
  * content.js — Universal Prompt Improver Content Script (MV3)
  * 
+ * Tương thích 100% với Chrome Extension Manifest V3 (Classic Content Script - Không dùng import ES Module).
+ * 
  * Hỗ trợ tự động:
- * 1. Claude.ai (Next to Attach button in toolbar)
- * 2. ChatGPT (chatgpt.com & chat.openai.com) (Next to Attach / Tools button)
+ * 1. Claude.ai (Toolbar / Next to Attach button)
+ * 2. ChatGPT (chatgpt.com & chat.openai.com)
  * 3. Google Gemini & AI Studio (gemini.google.com, aistudio.google.com)
  * 4. DeepSeek (chat.deepseek.com)
  * 5. Microsoft Copilot (copilot.microsoft.com)
- * 6. Perplexity AI (perplexity.ai)
- * 7. Phind, Poe, HuggingChat, Groq, và mọi web chat khác!
+ * 6. Perplexity AI, Phind, Poe, và mọi web chat khác.
  */
 
-// ─── HÀM ƯỚC TÍNH TOKEN ──────────────────────────────────────────────────────
+// ─── UTILITIES TỰ CHỨA (SELF-CONTAINED FOR MV3 CONTENT SCRIPT) ───────────────
 function estimateTokens(text) {
   if (!text || typeof text !== 'string') return 0;
   const trimmed = text.trim();
@@ -29,16 +30,31 @@ function estimateTokens(text) {
   }
 }
 
+function escapeHtml(text = '') {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function isDomainMatch(currentHostname, targetDomain) {
+  if (!currentHostname || !targetDomain) return false;
+  const host = currentHostname.toLowerCase();
+  const target = targetDomain.toLowerCase();
+  return host === target || host.endsWith('.' + target);
+}
+
 // ─── CẤU HÌNH DOM SELECTORS TOÀN DIỆN CHO CÁC NỀN TẢNG AI CHAT ────────────────
 const SITE_SELECTORS = {
-  // Claude
   'claude.ai': [
     'div[contenteditable="true"][data-testid="chat-input"]',
     'div[contenteditable="true"].ProseMirror',
     'div.tiptap.ProseMirror',
     'div[contenteditable="true"]',
   ],
-  // ChatGPT
   'chatgpt.com': [
     '#prompt-textarea',
     'div#prompt-textarea',
@@ -52,14 +68,12 @@ const SITE_SELECTORS = {
     'div#prompt-textarea',
     'textarea',
   ],
-  // DeepSeek
   'deepseek.com': [
     'textarea#chat-input',
     'textarea[placeholder*="DeepSeek" i]',
     'textarea',
     'div[contenteditable="true"]',
   ],
-  // Gemini & Google AI Studio
   'gemini.google.com': [
     'div.ql-editor',
     'rich-textarea div[contenteditable]',
@@ -69,19 +83,16 @@ const SITE_SELECTORS = {
     'textarea[placeholder]',
     'div[contenteditable="true"]',
   ],
-  // Microsoft Copilot
   'copilot.microsoft.com': [
     'textarea#userInput',
     'textarea[placeholder*="Ask" i]',
     'div[role="textbox"]',
     'textarea',
   ],
-  // Perplexity AI
   'perplexity.ai': [
     'textarea[placeholder*="Ask" i]',
     'textarea',
   ],
-  // Phind, Poe, HuggingFace
   'phind.com': ['textarea', 'div[contenteditable="true"]'],
   'poe.com': ['textarea[placeholder*="Talk" i]', 'textarea'],
 };
@@ -100,7 +111,6 @@ const GENERIC_INPUT_SELECTORS = [
   'textarea',
 ];
 
-// Danh sách selectors nút Attach / Tools trên các nền tảng
 const ATTACH_BTN_SELECTORS = [
   'button[data-testid="chat-input-attach"]',       // Claude
   'button[data-testid="attachment-button"]',      // ChatGPT
@@ -114,10 +124,10 @@ const ATTACH_BTN_SELECTORS = [
   'button[class*="attach"]',
 ];
 
-// Danh sách selectors nút Gửi (Send)
 const SEND_BTN_SELECTORS = [
   'button[data-testid="chat-input-send"]',        // Claude
   'button[data-testid="send-button"]',            // ChatGPT
+  'button[data-testid="composer-send-button"]',   // ChatGPT Modern
   'button[aria-label="Send message"]',
   'button[aria-label="Send prompt"]',
   'button[aria-label*="Send" i]',
@@ -133,12 +143,22 @@ const TASK_TYPE_LABELS = {
   general: '⚡ Tổng quát (General)',
 };
 
+const PERSONA_LIST = [
+  { id: 'developer', label: '⚡ Fullstack Dev', icon: '⚡' },
+  { id: 'architect', label: '🏗️ Architect', icon: '🏗️' },
+  { id: 'security',  label: '🛡️ AppSec', icon: '🛡️' },
+  { id: 'debugger',  label: '🐛 Bug Hunter', icon: '🐛' },
+  { id: 'copywriter',label: '✍️ Copywriter', icon: '✍️' },
+];
+
 // ─── TRẠNG THÁI TOÀN CỤC ────────────────────────────────────────────────────
 let activeInputElement = null;
 let lastOriginalPrompt = '';
 let isExtensionEnabledForSite = true;
 let modalShadowRoot = null;
 let hasInitialized = false;
+let currentEscListener = null;
+let currentActivePersona = 'developer';
 
 // ─── KHỞI CHẠY (INITIALIZE) ─────────────────────────────────────────────────
 async function init() {
@@ -160,10 +180,10 @@ async function init() {
   // 1. Tạo Host cho Modal và Toast
   createModalShadowHost();
 
-  // 2. Chèn nút vào Toolbar ngay lập tức
+  // 2. Quét và chèn nút ngay lập tức
   scanAndInjectToolbarButton();
 
-  // 3. Theo dõi DOM thay đổi (SPA navigation)
+  // 3. Theo dõi DOM thay đổi (SPA route navigation)
   const observer = new MutationObserver(debounce(() => {
     if (isExtensionEnabledForSite) {
       scanAndInjectToolbarButton();
@@ -174,12 +194,15 @@ async function init() {
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  // 4. Polling định kỳ mỗi 1s
+  // 4. Polling nhẹ định kỳ mỗi 800ms để đảm bảo luôn chèn nút khi chuyển chat SPA
   setInterval(() => {
     if (isExtensionEnabledForSite) {
-      scanAndInjectToolbarButton();
+      const existing = document.getElementById('pi-btn-host');
+      if (!existing || !document.body.contains(existing)) {
+        scanAndInjectToolbarButton();
+      }
     }
-  }, 1000);
+  }, 800);
 
   // 5. Lắng nghe context menu click
   chrome.runtime.onMessage.addListener((msg) => {
@@ -188,7 +211,7 @@ async function init() {
     }
   });
 
-  console.log('[PromptImprover] Content script đã kích hoạt trên:', hostname);
+  console.log('[PromptImprover] Content script đã kích hoạt thành công trên:', hostname);
 }
 
 // ─── MODAL SHADOW HOST ──────────────────────────────────────────────────────
@@ -210,7 +233,7 @@ function createModalShadowHost() {
   if (!hostEl.shadowRoot) {
     modalShadowRoot = hostEl.attachShadow({ mode: 'open' });
 
-    // Inject self-hosted @font-face declarations (MV3 CSP-safe)
+    // Inject self-hosted fonts
     const fontStyle = document.createElement('style');
     fontStyle.textContent = `
       @font-face { font-family:'Space Grotesk'; src:url('${chrome.runtime.getURL('assets/fonts/SpaceGrotesk-Regular.woff2')}') format('woff2'); font-weight:400; font-display:swap; }
@@ -234,9 +257,9 @@ function createModalShadowHost() {
 function findTargetChatInput() {
   const host = window.location.hostname;
 
-  // 1. Theo từng domain cụ thể
+  // 1. Theo domain cụ thể
   for (const [domain, selectors] of Object.entries(SITE_SELECTORS)) {
-    if (host.includes(domain)) {
+    if (isDomainMatch(host, domain)) {
       for (const sel of selectors) {
         const el = document.querySelector(sel);
         if (el && isElementVisible(el)) return el;
@@ -244,7 +267,7 @@ function findTargetChatInput() {
     }
   }
 
-  // 2. Generic fallback cho mọi web
+  // 2. Generic fallback
   for (const sel of GENERIC_INPUT_SELECTORS) {
     try {
       const el = document.querySelector(sel);
@@ -261,7 +284,7 @@ function isElementVisible(el) {
   return rect.width > 0 && rect.height > 0 && getComputedStyle(el).display !== 'none';
 }
 
-// ─── CHÈN NÚT "✨ CẢI THIỆN" VÀO THANH CÔNG CỤ TOOLBAR (DOM FLOW) ──────────────
+// ─── CHÈN NÚT "✨ CẢI THIỆN" VÀO THANH CÔNG CỤ TOOLBAR ───────────────────────
 function scanAndInjectButton() {
   scanAndInjectToolbarButton();
 }
@@ -272,13 +295,12 @@ function scanAndInjectToolbarButton() {
 
   activeInputElement = inputEl;
 
-  // Nếu nút đã tồn tại trong DOM và kết nối tốt, bỏ qua
+  // Nếu nút đã tồn tại và còn gắn trong DOM thì không chèn lại
   const existingHost = document.getElementById('pi-btn-host');
   if (existingHost && document.body.contains(existingHost)) {
     return;
   }
 
-  // 1. Tạo Host Element chứa Shadow DOM cho nút (cô lập CSS hoàn toàn)
   const hostEl = document.createElement('div');
   hostEl.id = 'pi-btn-host';
   hostEl.style.display = 'inline-flex';
@@ -288,7 +310,6 @@ function scanAndInjectToolbarButton() {
 
   const shadow = hostEl.attachShadow({ mode: 'open' });
 
-  // Inject self-hosted @font-face declarations using absolute extension URLs (MV3 CSP-safe)
   const fontStyle = document.createElement('style');
   fontStyle.textContent = `
     @font-face { font-family:'Space Grotesk'; src:url('${chrome.runtime.getURL('assets/fonts/SpaceGrotesk-Regular.woff2')}') format('woff2'); font-weight:400; font-display:swap; }
@@ -307,7 +328,7 @@ function scanAndInjectToolbarButton() {
   const btn = document.createElement('button');
   btn.className = 'pi-inject-btn';
   btn.type = 'button';
-  btn.title = 'Cải thiện prompt với Gemini 3.6 Flash (Prompt Improver)';
+  btn.title = 'Cải thiện prompt với AI Prompt Optimizer (Prompt Improver)';
   btn.innerHTML = `<span class="pi-sparkle">✨</span> <span>Cải thiện</span>`;
 
   btn.addEventListener('click', (e) => {
@@ -323,7 +344,7 @@ function scanAndInjectToolbarButton() {
 
   shadow.appendChild(btn);
 
-  // 2. CHIẾN LƯỢC 1: Tìm nút Attach / Đính kèm / + trên Toolbar
+  // Chiến lược 1: Tìm nút Attach / Đính kèm
   for (const sel of ATTACH_BTN_SELECTORS) {
     const attachBtn = document.querySelector(sel);
     if (attachBtn && isElementVisible(attachBtn)) {
@@ -340,7 +361,7 @@ function scanAndInjectToolbarButton() {
     }
   }
 
-  // 3. CHIẾN LƯỢC 2: Tìm cụm nút Gửi (Send / Submit)
+  // Chiến lược 2: Tìm nút Gửi (Send)
   for (const sel of SEND_BTN_SELECTORS) {
     const sendBtn = document.querySelector(sel);
     if (sendBtn && isElementVisible(sendBtn)) {
@@ -352,7 +373,7 @@ function scanAndInjectToolbarButton() {
     }
   }
 
-  // 4. CHIẾN LƯỢC 3: Chèn vào Toolbar hoặc Composer Wrapper của Input
+  // Chiến lược 3: Chèn vào Toolbar hoặc Composer Wrapper của Input
   const composerContainer = inputEl.closest('form') ||
                            inputEl.closest('div[class*="composer"]') ||
                            inputEl.closest('div[class*="rounded-"]') ||
@@ -408,12 +429,24 @@ function setPromptToInput(el, text) {
   }
 }
 
-// ─── HIỂN THỊ MODAL CẢI THIỆN PROMPT ─────────────────────────────────────────
-async function openImproveModal(promptText) {
+// ─── HIỂN THỊ MODAL CẢI THIỆN PROMPT (MEMORY SAFE) ─────────────────────────
+function safelyCloseModal() {
+  if (currentEscListener) {
+    window.removeEventListener('keydown', currentEscListener);
+    currentEscListener = null;
+  }
+  if (modalShadowRoot) {
+    const backdrop = modalShadowRoot.querySelector('.pi-overlay-backdrop');
+    if (backdrop) backdrop.remove();
+  }
+}
+
+async function openImproveModal(promptText, selectedPersona = currentActivePersona) {
   if (!modalShadowRoot) createModalShadowHost();
 
-  const oldModal = modalShadowRoot.querySelector('.pi-overlay-backdrop');
-  if (oldModal) oldModal.remove();
+  safelyCloseModal(); // Dọn dẹp modal cũ và event listener
+
+  currentActivePersona = selectedPersona;
 
   const backdrop = document.createElement('div');
   backdrop.className = 'pi-overlay-backdrop';
@@ -430,11 +463,21 @@ async function openImproveModal(promptText) {
       </div>
       <button id="piBtnClose" class="pi-btn-close" title="Đóng (Esc)">✕</button>
     </div>
+
+    <!-- Persona Selector Bar -->
+    <div class="pi-persona-bar">
+      ${PERSONA_LIST.map(p => `
+        <button class="pi-persona-chip ${p.id === currentActivePersona ? 'active' : ''}" data-persona="${p.id}">
+          ${p.label}
+        </button>
+      `).join('')}
+    </div>
+
     <div id="piModalBody" class="pi-body">
       <div class="pi-skeleton-box">
         <div class="pi-spinner"></div>
-        <div class="pi-loading-text">Đang tối ưu hóa prompt với Gemini 3.6 Flash...</div>
-        <div class="pi-loading-subtext">Đang tạo 2 phiên bản (Tối giản & Chi tiết) và phân tích giả định</div>
+        <div class="pi-loading-text">Đang tối ưu hóa prompt với Gemini...</div>
+        <div class="pi-loading-subtext">Đang phân tích bối cảnh, tính điểm chất lượng và tạo 2 phiên bản</div>
       </div>
     </div>
   `;
@@ -442,25 +485,35 @@ async function openImproveModal(promptText) {
   backdrop.appendChild(modal);
   modalShadowRoot.appendChild(backdrop);
 
+  // Đóng Modal an toàn
   const closeBtn = modal.querySelector('#piBtnClose');
-  const closeModal = () => backdrop.remove();
-  closeBtn.addEventListener('click', closeModal);
+  closeBtn.addEventListener('click', safelyCloseModal);
   backdrop.addEventListener('click', (e) => {
-    if (e.target === backdrop) closeModal();
+    if (e.target === backdrop) safelyCloseModal();
   });
 
-  const handleEsc = (e) => {
+  // Đăng ký Escape Listener có cleanup
+  currentEscListener = (e) => {
     if (e.key === 'Escape') {
-      closeModal();
-      window.removeEventListener('keydown', handleEsc);
+      safelyCloseModal();
     }
   };
-  window.addEventListener('keydown', handleEsc);
+  window.addEventListener('keydown', currentEscListener);
+
+  // Gắn sự kiện chọn Persona
+  modal.querySelectorAll('.pi-persona-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const pId = chip.dataset.persona;
+      if (pId !== currentActivePersona) {
+        openImproveModal(promptText, pId);
+      }
+    });
+  });
 
   try {
     const res = await chrome.runtime.sendMessage({
       action: 'IMPROVE_PROMPT',
-      payload: { prompt: promptText },
+      payload: { prompt: promptText, persona: currentActivePersona },
     });
 
     if (!res || !res.success) {
@@ -489,7 +542,57 @@ function renderModalContent(modal, originalPrompt, data) {
   const minTokens = estimateTokens(data.minimal || '');
   const detTokens = estimateTokens(data.detailed || '');
 
+  const origScore = data.originalScore?.overallScore ?? 50;
+  const impScore = data.detailedScore?.overallScore ?? 85;
+  const deltaScore = impScore - origScore;
+
   body.innerHTML = `
+    <!-- Score Dashboard -->
+    <div class="pi-score-dashboard">
+      <div class="pi-score-header">
+        <div class="pi-score-title">📊 Điểm chất lượng Prompt</div>
+        <div class="pi-score-badge-group">
+          <span class="pi-score-badge ${getScoreClass(origScore)}">Gốc: ${origScore}/100</span>
+          <span>➔</span>
+          <span class="pi-score-badge ${getScoreClass(impScore)}">Mới: ${impScore}/100</span>
+          ${deltaScore > 0 ? `<span class="pi-score-delta">+${deltaScore} điểm</span>` : ''}
+        </div>
+      </div>
+
+      <!-- Metrics Breakdown -->
+      <div class="pi-metrics-grid">
+        <div class="pi-metric-item">
+          <div class="pi-metric-label">
+            <span>Rõ ràng</span>
+            <span>${data.detailedScore?.clarity ?? 80}%</span>
+          </div>
+          <div class="pi-metric-bar">
+            <div class="pi-metric-fill" style="width: ${data.detailedScore?.clarity ?? 80}%"></div>
+          </div>
+        </div>
+
+        <div class="pi-metric-item">
+          <div class="pi-metric-label">
+            <span>Bối cảnh</span>
+            <span>${data.detailedScore?.context ?? 85}%</span>
+          </div>
+          <div class="pi-metric-bar">
+            <div class="pi-metric-fill" style="width: ${data.detailedScore?.context ?? 85}%"></div>
+          </div>
+        </div>
+
+        <div class="pi-metric-item">
+          <div class="pi-metric-label">
+            <span>Súc tích</span>
+            <span>${data.detailedScore?.conciseness ?? 90}%</span>
+          </div>
+          <div class="pi-metric-bar">
+            <div class="pi-metric-fill" style="width: ${data.detailedScore?.conciseness ?? 90}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Prompt Gốc Collapsible -->
     <details class="pi-original-box">
       <summary>📝 Prompt gốc (${origTokens} tokens)</summary>
@@ -563,7 +666,7 @@ function renderModalContent(modal, originalPrompt, data) {
     });
   });
 
-  // Gắn sự kiện "Dùng bản này" (Apply) & Kích hoạt Hoàn tác (Undo)
+  // Gắn sự kiện Dùng bản này (Apply)
   body.querySelectorAll('.pi-btn-apply').forEach((btn) => {
     btn.addEventListener('click', () => {
       const newPrompt = decodeURIComponent(btn.dataset.apply);
@@ -573,12 +676,16 @@ function renderModalContent(modal, originalPrompt, data) {
         setPromptToInput(activeInputElement, newPrompt);
       }
 
-      const backdrop = modalShadowRoot.querySelector('.pi-overlay-backdrop');
-      if (backdrop) backdrop.remove();
-
+      safelyCloseModal();
       showUndoToast(originalPrompt);
     });
   });
+}
+
+function getScoreClass(score) {
+  if (score >= 75) return 'pi-score-high';
+  if (score >= 50) return 'pi-score-med';
+  return 'pi-score-low';
 }
 
 // ─── RENDER LỖI VÀO MODAL ───────────────────────────────────────────────────
@@ -597,9 +704,7 @@ function renderModalError(modal, errorMsg) {
     </div>
   `;
 
-  body.querySelector('.pi-btn-error-close')?.addEventListener('click', () => {
-    modal.closest('.pi-overlay-backdrop')?.remove();
-  });
+  body.querySelector('.pi-btn-error-close')?.addEventListener('click', safelyCloseModal);
 }
 
 // ─── TOAST THÔNG BÁO VÀ NÚT HOÀN TÁC (UNDO) ──────────────────────────────────
@@ -642,7 +747,7 @@ function showUndoToast(previousPrompt) {
   modalShadowRoot.appendChild(toast);
 
   setTimeout(() => {
-    if (modalShadowRoot.contains(toast)) {
+    if (modalShadowRoot && modalShadowRoot.contains(toast)) {
       toast.style.opacity = '0';
       toast.style.transition = 'all 0.3s ease';
       setTimeout(() => toast.remove(), 300);
@@ -651,15 +756,6 @@ function showUndoToast(previousPrompt) {
 }
 
 // ─── TIỆN ÍCH TRỢ GIÚP ──────────────────────────────────────────────────────
-function escapeHtml(text = '') {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
 function calcDiff(orig, opt) {
   if (orig <= 0) return '';
   const diff = opt - orig;

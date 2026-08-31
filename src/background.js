@@ -1,22 +1,24 @@
 /**
- * background.js (Service Worker MV3) — Prompt Improver
+ * background.js (Service Worker MV3) — Prompt Improver Architecture v2.0
  * 
  * Chức năng:
  * 1. Định tuyến yêu cầu cải thiện prompt (IMPROVE_PROMPT).
- * 2. Cache kết quả theo SHA-256 hash của prompt (tránh gọi API trùng lặp, tiết kiệm quota).
- * 3. Gọi Cloudflare Worker Backend trung gian với Retry Exponential Backoff (1s, 2s, 4s).
- * 4. Kiểm tra trạng thái Backend (PING_BACKEND) và đo latency.
- * 5. Quản lý lịch sử (History) và danh sách cấu hình bật/tắt theo Site.
- * 6. Context menu tích hợp.
+ * 2. Tích hợp Persona Strategy và Scoring Pipeline (đánh giá chất lượng prompt định lượng).
+ * 3. Cache kết quả theo SHA-256 hash của prompt + persona với cơ chế LRU Auto-Eviction.
+ * 4. Gọi Cloudflare Worker Backend trung gian với Retry Exponential Backoff.
+ * 5. Đo lường latency, quản lý lịch sử (tối đa 50 mục) và so khớp domain an toàn.
  */
 
-import { hashPrompt, detectTaskType } from './utils.js';
+import { hashPrompt, detectTaskType, isDomainMatch } from './utils.js';
+import { PromptScoringEngine } from './scoringEngine.js';
 
 // ─── CẤU HÌNH MẶC ĐỊNH ──────────────────────────────────────────────────────
 const DEFAULT_SETTINGS = {
   backendUrl: '',
   enableCache: true,
   cacheTtlMs: 24 * 60 * 60 * 1000, // 24 giờ
+  maxCacheEntries: 200,             // Giới hạn tối đa 200 items cache tránh đầy storage
+  defaultPersona: 'developer',
   siteSettings: {
     'chatgpt.com': true,
     'chat.openai.com': true,
@@ -83,7 +85,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.action) {
 
-    // ── 1. Cải thiện Prompt (gọi Backend Worker) ────────────────────────────
+    // ── 1. Cải thiện Prompt & Đánh giá chất lượng ───────────────────────────
     case 'IMPROVE_PROMPT': {
       handleImprovePrompt(request.payload || {})
         .then(res => sendResponse(res))
@@ -91,7 +93,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true; // Async response
     }
 
-    // ── 2. Ping kiểm tra Backend URL ────────────────────────────────────────
+    // ── 2. Chấm điểm Prompt độc lập (Scoring Engine) ────────────────────────
+    case 'SCORE_PROMPT': {
+      try {
+        const text = request.text || '';
+        const score = PromptScoringEngine.evaluate(text);
+        sendResponse({ success: true, score });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+      return false;
+    }
+
+    // ── 3. Ping kiểm tra Backend URL ────────────────────────────────────────
     case 'PING_BACKEND': {
       handlePingBackend(request.url)
         .then(res => sendResponse(res))
@@ -99,7 +113,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
     }
 
-    // ── 3. Quản lý Cache ────────────────────────────────────────────────────
+    // ── 4. Quản lý Cache ────────────────────────────────────────────────────
     case 'CLEAR_CACHE': {
       handleClearCache()
         .then(() => sendResponse({ success: true }))
@@ -114,25 +128,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
     }
 
-    // ── 4. Lịch sử ──────────────────────────────────────────────────────────
+    // ── 5. Lịch sử ──────────────────────────────────────────────────────────
     case 'CLEAR_HISTORY': {
       chrome.storage.local.remove('cco_history', () => sendResponse({ success: true }));
       return true;
     }
 
-    // ── 5. Kiểm tra site có được bật không ──────────────────────────────────
+    // ── 6. Kiểm tra site có được bật không (Safe Domain Matching) ───────────
     case 'CHECK_SITE_ENABLED': {
       const hostname = request.hostname || '';
       chrome.storage.local.get(['siteSettings'], (data) => {
         const sites = data.siteSettings || DEFAULT_SETTINGS.siteSettings;
-        const matchedKey = Object.keys(sites).find(domain => hostname.includes(domain));
+        const matchedKey = Object.keys(sites).find(domain => isDomainMatch(hostname, domain));
         const isEnabled = matchedKey ? sites[matchedKey] !== false : true;
         sendResponse({ enabled: isEnabled });
       });
       return true;
     }
 
-    // ── 6. Lấy phiên bản Manifest ────────────────────────────────────────────
+    // ── 7. Lấy phiên bản Manifest ────────────────────────────────────────────
     case 'GET_VERSION': {
       sendResponse({ version: chrome.runtime.getManifest().version });
       return false;
@@ -140,64 +154,73 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// ─── LOGIC CẢI THIỆN PROMPT (VỚI CACHE & RETRY) ─────────────────────────────
-async function handleImprovePrompt({ prompt, taskType, bypassCache = false }) {
+// ─── LOGIC CẢI THIỆN PROMPT (VỚI SCORING, CACHE & RETRY) ───────────────────
+async function handleImprovePrompt({ prompt, taskType, persona = 'developer', bypassCache = false }) {
   const cleanPrompt = prompt?.trim();
   if (!cleanPrompt) {
     throw new Error('Prompt không được để trống.');
   }
 
   const detectedType = taskType || detectTaskType(cleanPrompt);
-  const hash = await hashPrompt(cleanPrompt);
+  const hash = await hashPrompt(`${persona}:${cleanPrompt}`);
   const settings = await chrome.storage.local.get(['backendUrl', 'enableCache', 'cacheTtlMs']);
   const enableCache = settings.enableCache !== false;
   const cacheTtlMs = settings.cacheTtlMs || DEFAULT_SETTINGS.cacheTtlMs;
 
-  // 1. Kiểm tra Cache local
+  // 1. Chấm điểm Prompt gốc ngay lập tức
+  const originalScore = PromptScoringEngine.evaluate(cleanPrompt);
+
+  // 2. Kiểm tra Cache local
   if (enableCache && !bypassCache) {
     const cacheKey = `cache_${hash}`;
     const cachedData = await chrome.storage.local.get([cacheKey]);
     if (cachedData[cacheKey]) {
       const entry = cachedData[cacheKey];
       if (Date.now() - entry.timestamp < cacheTtlMs) {
-        console.log('[PromptImprover] Cache hit cho hash:', hash);
         return {
           success: true,
           isCached: true,
+          originalScore,
           ...entry.data,
         };
       }
     }
   }
 
-  // 2. Kiểm tra Backend URL
+  // 3. Kiểm tra Backend URL
   const backendUrl = (settings.backendUrl || '').trim().replace(/\/+$/, '');
   if (!backendUrl) {
     throw new Error(
-      'Chưa cấu hình Backend URL! Vui lòng bấm vào icon extension trên thanh công cụ để nhập URL Cloudflare Worker.'
+      'Chưa cấu hình Backend URL! Vui lòng mở Popup Extension để nhập URL Cloudflare Worker.'
     );
   }
 
-  // 3. Gọi Backend với Retry Exponential Backoff
+  // 4. Gọi Backend với Retry Exponential Backoff
   const endpoint = backendUrl.endsWith('/improve') ? backendUrl : `${backendUrl}/improve`;
   const responseData = await fetchWithRetry(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: cleanPrompt, taskType: detectedType }),
+    body: JSON.stringify({ prompt: cleanPrompt, taskType: detectedType, persona }),
   }, 3);
 
-  // 4. Lưu Cache nếu thành công
+  // 5. Chấm điểm cho 2 bản prompt cải thiện
+  const minimalScore = PromptScoringEngine.evaluate(responseData.minimal || cleanPrompt);
+  const detailedScore = PromptScoringEngine.evaluate(responseData.detailed || cleanPrompt);
+
+  const enhancedResponse = {
+    ...responseData,
+    persona,
+    originalScore,
+    minimalScore,
+    detailedScore,
+  };
+
+  // 6. Lưu Cache với cơ chế Auto-Eviction
   if (enableCache && responseData && responseData.success) {
-    const cacheKey = `cache_${hash}`;
-    await chrome.storage.local.set({
-      [cacheKey]: {
-        timestamp: Date.now(),
-        data: responseData,
-      },
-    });
+    await saveCacheWithEviction(`cache_${hash}`, enhancedResponse);
   }
 
-  // 5. Lưu vào Lịch sử (tối đa 50 mục)
+  // 7. Lưu vào Lịch sử (tối đa 50 mục)
   await saveToHistory({
     id: 'hist_' + Date.now(),
     prompt: cleanPrompt,
@@ -205,13 +228,16 @@ async function handleImprovePrompt({ prompt, taskType, bypassCache = false }) {
     detailed: responseData.detailed,
     assumptions: responseData.assumptions || [],
     taskType: responseData.taskType || detectedType,
+    persona,
+    originalScore: originalScore.overallScore,
+    improvedScore: detailedScore.overallScore,
     timestamp: Date.now(),
   });
 
   return {
     success: true,
     isCached: false,
-    ...responseData,
+    ...enhancedResponse,
   };
 }
 
@@ -225,56 +251,47 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
     try {
       const res = await fetch(url, options);
 
-      // 429 = Rate limit (Gemini hoặc Cloudflare) -> Retry
       if (res.status === 429) {
         const errJson = await res.json().catch(() => ({}));
         lastError = new Error(errJson.message || 'Quá giới hạn lượt gọi API (Rate limit 429)');
         if (attempt < maxRetries - 1) {
           const backoff = Math.min(1000 * (2 ** attempt), 6000);
-          console.warn(`[PromptImprover] Rate limit (429), retry ${attempt + 1}/${maxRetries} sau ${backoff}ms...`);
           await delay(backoff);
           continue;
         }
         throw lastError;
       }
 
-      // 502/503/504 = Cloudflare server temporarily down -> Retry
       if (res.status === 502 || res.status === 503 || res.status === 504) {
         const errJson = await res.json().catch(() => ({}));
         lastError = new Error(errJson.message || `Server tạm thời không phản hồi (HTTP ${res.status})`);
         if (attempt < maxRetries - 1) {
           const backoff = Math.min(1000 * (2 ** attempt), 6000);
-          console.warn(`[PromptImprover] Server error (${res.status}), retry ${attempt + 1}/${maxRetries} sau ${backoff}ms...`);
           await delay(backoff);
           continue;
         }
         throw lastError;
       }
 
-      // Nếu trả về lỗi (400, 401, 403, 404, 500) -> Đọc ngay message cụ thể từ backend
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
         throw new Error(errJson.message || `Backend báo lỗi HTTP ${res.status}`);
       }
 
-      const json = await res.json();
-      return json;
+      return await res.json();
     } catch (err) {
       lastError = err;
-      // Nếu là lỗi logic (thiếu API key, key sai, tham số lỗi) thì ném ngay, không chờ retry
       if (
         err.message?.includes('GEMINI_API_KEY') ||
         err.message?.includes('MISSING_API_KEY') ||
         err.message?.includes('API key not valid') ||
-        err.message?.includes('API key') ||
-        err.message?.includes('HTTP 4')
+        err.message?.includes('UNAUTHORIZED_ACCESS')
       ) {
         throw err;
       }
 
       if (attempt < maxRetries - 1) {
         const backoff = Math.min(1000 * (2 ** attempt), 6000);
-        console.warn(`[PromptImprover] Network retry ${attempt + 1}/${maxRetries} sau ${backoff}ms:`, err.message);
         await delay(backoff);
       }
     }
@@ -319,7 +336,34 @@ async function handlePingBackend(rawUrl) {
   }
 }
 
-// ─── CACHE HELPERS ──────────────────────────────────────────────────────────
+// ─── CACHE MANAGEMENT VỚI AUTO LRU EVICTION ────────────────────────────────
+async function saveCacheWithEviction(cacheKey, data) {
+  try {
+    const allData = await chrome.storage.local.get(null);
+    const cacheKeys = Object.keys(allData).filter(k => k.startsWith('cache_'));
+
+    // Nếu số cache entries vượt quá 200, xóa 30 entries cũ nhất
+    if (cacheKeys.length >= DEFAULT_SETTINGS.maxCacheEntries) {
+      const sortedKeys = cacheKeys.sort((a, b) => {
+        const timeA = allData[a]?.timestamp || 0;
+        const timeB = allData[b]?.timestamp || 0;
+        return timeA - timeB;
+      });
+      const keysToRemove = sortedKeys.slice(0, 30);
+      await chrome.storage.local.remove(keysToRemove);
+    }
+
+    await chrome.storage.local.set({
+      [cacheKey]: {
+        timestamp: Date.now(),
+        data,
+      },
+    });
+  } catch (err) {
+    console.warn('[PromptImprover] Lỗi khi lưu cache:', err);
+  }
+}
+
 async function handleClearCache() {
   const allData = await chrome.storage.local.get(null);
   const cacheKeys = Object.keys(allData).filter(k => k.startsWith('cache_'));
@@ -335,14 +379,14 @@ async function handleGetCacheStats() {
   return { cacheCount: cacheKeys.length };
 }
 
-// ─── HISTORY HELPERS ────────────────────────────────────────────────────────
+// ─── HISTORY MANAGEMENT ─────────────────────────────────────────────────────
 async function saveToHistory(entry) {
   try {
     const data = await chrome.storage.local.get(['cco_history']);
     let history = Array.isArray(data.cco_history) ? data.cco_history : [];
     history.unshift(entry);
     if (history.length > 50) {
-      history = history.slice(0, 50); // Giữ tối đa 50 mục
+      history = history.slice(0, 50);
     }
     await chrome.storage.local.set({ cco_history: history });
   } catch (err) {

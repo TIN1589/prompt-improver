@@ -1,6 +1,8 @@
 /**
- * popup.js — Logic điều khiển Popup giao diện Prompt Improver
+ * popup.js — Logic điều khiển Popup giao diện Prompt Improver v2.0
  */
+
+import { escapeHtml } from './utils.js';
 
 const SITE_LABELS = {
   'chatgpt.com': 'ChatGPT (chatgpt.com)',
@@ -98,7 +100,6 @@ async function loadSettings() {
   
   if (data.backendUrl) {
     inputBackendUrl.value = data.backendUrl;
-    // Tự động ping thử nếu đã có URL
     checkServerStatus(data.backendUrl);
   }
 
@@ -272,7 +273,8 @@ async function loadHistory() {
     div.className = 'pi-history-item';
     div.innerHTML = `
       <div class="pi-history-header">
-        <span class="pi-badge-sm">${item.taskType || 'prompt'}</span>
+        <span class="pi-badge-sm">${item.persona || item.taskType || 'prompt'}</span>
+        ${item.improvedScore ? `<span class="pi-badge-sm" style="background:#dcfce7;color:#15803d;border-color:#15803d;">⭐ ${item.improvedScore}/100</span>` : ''}
         <span class="pi-history-date">${dateStr}</span>
       </div>
       <div class="pi-history-prompt" title="${escapeHtml(item.prompt)}">
@@ -306,25 +308,20 @@ function handleClearHistory() {
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 async function copyText(text, btnEl) {
   if (!text) return;
-  await navigator.clipboard.writeText(text);
-  const oldText = btnEl.textContent;
-  btnEl.textContent = '✔ Đã chép!';
-  setTimeout(() => {
-    btnEl.textContent = oldText;
-  }, 1500);
+  try {
+    await navigator.clipboard.writeText(text);
+    const oldText = btnEl.textContent;
+    btnEl.textContent = '✔ Đã chép!';
+    setTimeout(() => {
+      btnEl.textContent = oldText;
+    }, 1500);
+  } catch (e) {
+    console.warn('Lỗi chép clipboard:', e);
+  }
 }
 
 function showAlert(el, msg, type = 'success') {
   el.className = `pi-alert-box ${type === 'success' ? 'pi-alert-success' : 'pi-alert-error'}`;
   el.textContent = msg;
   el.style.display = 'block';
-}
-
-function escapeHtml(text = '') {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }

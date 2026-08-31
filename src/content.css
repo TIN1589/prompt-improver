@@ -562,3 +562,145 @@
 @keyframes pi-spin {
   to { transform: rotate(360deg); }
 }
+
+/* ─── PERSONA STRATEGY BAR ───────────────────────────────────────────────── */
+.pi-persona-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 8px 2px;
+  margin-bottom: 12px;
+  scrollbar-width: thin;
+}
+
+.pi-persona-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1.5px solid var(--pi-espresso);
+  background: var(--pi-surface);
+  font-family: var(--pi-font);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pi-espresso);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  box-shadow: 2px 2px 0px var(--pi-espresso);
+}
+
+.pi-persona-chip:hover {
+  background: var(--pi-sand);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--pi-espresso);
+}
+
+.pi-persona-chip.active {
+  background: var(--pi-primary-container);
+  color: var(--pi-on-primary-container);
+  box-shadow: inset 1px 1px 0px var(--pi-espresso);
+}
+
+/* ─── SCORE DASHBOARD & METRICS ──────────────────────────────────────────── */
+.pi-score-dashboard {
+  background: var(--pi-surface-lowest);
+  border: var(--pi-border);
+  border-radius: var(--pi-radius);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  box-shadow: var(--pi-shadow);
+}
+
+.pi-score-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.pi-score-title {
+  font-family: var(--pi-font);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pi-espresso);
+}
+
+.pi-score-badge-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pi-score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: var(--pi-radius-sm);
+  font-family: var(--pi-font);
+  font-weight: 700;
+  font-size: 12px;
+  border: 1.5px solid var(--pi-espresso);
+}
+
+.pi-score-high {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pi-score-med {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.pi-score-low {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pi-score-delta {
+  font-family: var(--pi-font);
+  font-size: 11px;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.pi-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pi-metric-item {
+  background: var(--pi-background);
+  border: 1px solid var(--pi-outline-variant);
+  border-radius: var(--pi-radius-sm);
+  padding: 6px 8px;
+}
+
+.pi-metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pi-on-surface-variant);
+  display: flex;
+  justify-content: space-between;
+}
+
+.pi-metric-bar {
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.pi-metric-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--pi-primary-container);
+  transition: width 0.4s ease;
+}
+

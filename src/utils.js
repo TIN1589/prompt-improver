@@ -1,6 +1,7 @@
 /**
  * Prompt Improver - Core Utility Module
- * Chứa các thuật toán nén prompt, trích xuất thực thể, băm SHA-256, phân loại tác vụ và mã hoá Web Crypto.
+ * Chứa các thuật toán nén prompt, trích xuất thực thể, băm SHA-256, phân loại tác vụ,
+ * kiểm tra domain an toàn và mã hoá Web Crypto chống tràn stack.
  */
 
 // Danh sách từ đệm và mẫu câu hội thoại dư thừa (tiếng Việt & tiếng Anh)
@@ -61,7 +62,36 @@ const VERBOSE_REPLACEMENTS = [
 ];
 
 /**
- * 1. Ước lượng số lượng token
+ * 1. Chuyển đổi Uint8Array sang Base64 an toàn không lo tràn Stack
+ * @param {Uint8Array} bytes
+ * @returns {string}
+ */
+export function uint8ArrayToBase64(bytes) {
+  let binary = '';
+  const len = bytes.byteLength;
+  const chunkSize = 0x8000; // 32KB chunks
+  for (let i = 0; i < len; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunkSize, len)));
+  }
+  return btoa(binary);
+}
+
+/**
+ * 2. Chuyển đổi Base64 sang Uint8Array an toàn
+ * @param {string} base64
+ * @returns {Uint8Array}
+ */
+export function base64ToUint8Array(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/**
+ * 3. Ước lượng số lượng token
  * Hỗ trợ nhận diện đặc thù tiếng Việt (dấu thanh/âm tiết ghép) và tiếng Anh/Code.
  * @param {string} text - Văn bản cần đếm token
  * @returns {number} Số token ước tính
@@ -88,7 +118,20 @@ export function estimateTokens(text) {
 }
 
 /**
- * 2. Phân loại tác vụ từ prompt (Code, Writing, Analysis, Translation, General)
+ * 4. Kiểm tra so khớp Domain an toàn chống Domain Spoofing
+ * @param {string} currentHostname
+ * @param {string} targetDomain
+ * @returns {boolean}
+ */
+export function isDomainMatch(currentHostname, targetDomain) {
+  if (!currentHostname || !targetDomain) return false;
+  const host = currentHostname.toLowerCase();
+  const target = targetDomain.toLowerCase();
+  return host === target || host.endsWith('.' + target);
+}
+
+/**
+ * 5. Phân loại tác vụ từ prompt (Code, Writing, Analysis, Translation, General)
  * @param {string} prompt
  * @returns {'code' | 'writing' | 'analysis' | 'translation' | 'general'}
  */
@@ -101,7 +144,7 @@ export function detectTaskType(prompt = '') {
     p.includes('typescript') || p.includes('python') || p.includes('react') ||
     p.includes('api') || p.includes('sql') || p.includes('refactor') ||
     p.includes(' thuật toán') || p.includes('class ') || p.includes('html') ||
-    p.includes('css') || p.includes('component')
+    p.includes('css') || p.includes('component') || p.includes('kỹ thuật')
   ) {
     return 'code';
   }
@@ -125,7 +168,7 @@ export function detectTaskType(prompt = '') {
   if (
     p.includes('phân tích') || p.includes('so sánh') || p.includes('đánh giá') ||
     p.includes('tóm tắt') || p.includes('giải thích') || p.includes('nguyên nhân') ||
-    p.includes('ưu nhược điểm') || p.includes('kế hoạch')
+    p.includes('ưu nhược điểm') || p.includes('kế hoạch') || p.includes('lộ trình')
   ) {
     return 'analysis';
   }
@@ -134,7 +177,7 @@ export function detectTaskType(prompt = '') {
 }
 
 /**
- * 3. Tính hash SHA-256 của prompt để lưu cache
+ * 6. Tính hash SHA-256 của prompt để lưu cache
  * @param {string} text
  * @returns {Promise<string>}
  */
@@ -146,18 +189,17 @@ export async function hashPrompt(text = '') {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
-  // Fallback simple hash for non-crypto environments
-  let hash = 0;
+  // Fallback FNV-1a hash cho non-crypto environments
+  let hash = 2166136261;
   for (let i = 0; i < normalized.length; i++) {
-    const char = normalized.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
+    hash ^= normalized.charCodeAt(i);
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
   }
-  return 'h_' + Math.abs(hash).toString(16);
+  return 'h_' + (hash >>> 0).toString(16);
 }
 
 /**
- * 4. Trích xuất thực thể và từ khóa kỹ thuật bằng Regex + Heuristics
+ * 7. Trích xuất thực thể và từ khóa kỹ thuật bằng Regex + Heuristics
  * @param {string} text
  * @returns {{languages: string[], frameworks: string[], actions: string[], identifiers: string[], constraints: string[]}}
  */
@@ -174,19 +216,22 @@ export function extractEntities(text) {
   const langRegex = /\b(javascript|typescript|python|golang|go|rust|java|c\+\+|c#|php|ruby|swift|kotlin|sql|html|css|bash|shell|powershell)\b/gi;
   let match;
   while ((match = langRegex.exec(text)) !== null) {
-    if (!languages.includes(match[1].toLowerCase())) languages.push(match[1].toLowerCase());
+    const val = match[1].toLowerCase();
+    if (!languages.includes(val)) languages.push(val);
   }
 
   // Frameworks & Libraries
   const frameworkRegex = /\b(react|vue|angular|svelte|next\.js|nuxt|express|fastapi|django|flask|spring|laravel|tailwind|bootstrap|docker|kubernetes|chrome extension|manifest v3)\b/gi;
   while ((match = frameworkRegex.exec(text)) !== null) {
-    if (!frameworks.includes(match[1].toLowerCase())) frameworks.push(match[1].toLowerCase());
+    const val = match[1].toLowerCase();
+    if (!frameworks.includes(val)) frameworks.push(val);
   }
 
   // Hành động chính
-  const actionRegex = /\b(tạo|xây dựng|viết|tối ưu|sửa lỗi|refactor|debug|create|build|implement|optimize|fix|refactor|test|generate|deploy)\b/gi;
+  const actionRegex = /\b(tạo|xây dựng|viết|tối ưu|sửa lỗi|refactor|debug|create|build|implement|optimize|fix|test|generate|deploy)\b/gi;
   while ((match = actionRegex.exec(text)) !== null) {
-    if (!actions.includes(match[1].toLowerCase())) actions.push(match[1].toLowerCase());
+    const val = match[1].toLowerCase();
+    if (!actions.includes(val)) actions.push(val);
   }
 
   // Ký hiệu biến, hàm, camelCase / snake_case / kebab-case
@@ -218,7 +263,7 @@ export function extractEntities(text) {
 }
 
 /**
- * 5. Tóm tắt văn bản theo phương pháp Extractive TextRank đơn giản hóa
+ * 8. Tóm tắt văn bản theo phương pháp Extractive TextRank đơn giản hóa
  * @param {string} text
  * @param {number} maxSentences
  * @returns {string}
@@ -262,7 +307,7 @@ export function summarizeText(text, maxSentences = 3) {
 }
 
 /**
- * 6. Nén Prompt theo 3 cấp độ (Conservative, Balanced, Aggressive)
+ * 9. Nén Prompt theo 3 cấp độ (Conservative, Balanced, Aggressive)
  * @param {string} text - Văn bản prompt gốc
  * @param {'conservative' | 'balanced' | 'aggressive'} mode - Cấp độ nén
  * @returns {string} Văn bản prompt sau khi tối ưu
@@ -272,7 +317,7 @@ export function compressPrompt(text, mode = 'balanced') {
 
   let result = text;
 
-  // BƯỚC 1: Xóa filler words & hội thoại thừa (áp dụng cho mọi mode)
+  // BƯỚC 1: Xóa filler words & hội thoại thừa
   for (const pattern of [...FILLER_PATTERNS_VI, ...FILLER_PATTERNS_EN]) {
     result = result.replace(pattern, ' ');
   }
@@ -286,7 +331,7 @@ export function compressPrompt(text, mode = 'balanced') {
     .replace(/([.?!,;])\1+/g, '$1')
     .trim();
 
-  // Loại bỏ các từ nối mở đầu bị lẻ như "và", "để", "thì" ở đầu câu
+  // Loại bỏ các từ nối mở đầu bị lẻ ở đầu câu
   result = result.replace(/^(và|để|thì|nhưng|and|so|then)\s+/gim, '').trim();
 
   if (mode === 'conservative') {
@@ -307,35 +352,21 @@ export function compressPrompt(text, mode = 'balanced') {
     return result;
   }
 
-  // BƯỚC 3: Aggressive Compression
-  const entities = extractEntities(result);
-  
+  // BƯỚC 3: Aggressive Compression - Rút gọn tối đa mọi từ phụ
   let cleanTask = result
     .replace(/\b(hàm|function|chương trình)\b/gi, 'fn')
     .replace(/\b(hợp lệ|valid)\b/gi, 'valid')
     .replace(/\b(kiểm tra|validate|check)\b/gi, 'validate')
+    .replace(/\b(cho một|cho|một|các|những|thì|tự động|thực hiện)\b/gi, '')
     .replace(/[.?!]+$/g, '')
+    .replace(/[ \t]+/g, ' ')
     .trim();
 
-  let compressedBlocks = [];
-  compressedBlocks.push(`TASK: ${cleanTask}`);
-
-  if (entities.languages.length > 0 || entities.frameworks.length > 0) {
-    const stack = [...entities.languages, ...entities.frameworks].join(',');
-    compressedBlocks.push(`STACK: ${stack}`);
-  }
-
-  if (entities.constraints.length > 0) {
-    compressedBlocks.push(`RULES: ${entities.constraints.join(';')}`);
-  }
-
-  compressedBlocks.push(`OUT: Code only`);
-
-  return compressedBlocks.join('\n');
+  return cleanTask;
 }
 
 /**
- * 7. Mở rộng Concept theo quy tắc (Rule-based Expansion)
+ * 9. Mở rộng Concept theo quy tắc (Rule-based Expansion)
  * @param {string} concept - Ý tưởng cốt lõi
  * @returns {Array<{title: string, prompt: string, estimatedTokens: number}>}
  */
@@ -366,7 +397,7 @@ export function expandConceptRuleBased(concept) {
 }
 
 /**
- * 8. Xây dựng Prompt theo khuôn mẫu chuẩn cho Claude Code / AI
+ * 10. Xây dựng Prompt theo khuôn mẫu chuẩn
  */
 export function buildTemplatePrompt({ task, context = '', constraints = [], outputFormat = 'code' }) {
   const parts = [];
@@ -389,7 +420,7 @@ export function buildTemplatePrompt({ task, context = '', constraints = [], outp
 }
 
 /**
- * 9. Web Crypto API: Mã hoá AES-GCM 256-bit với PBKDF2
+ * 11. Web Crypto API: Mã hoá AES-GCM 256-bit an toàn với PBKDF2
  */
 export async function encryptData(plainText, passphrase) {
   const enc = new TextEncoder();
@@ -424,22 +455,22 @@ export async function encryptData(plainText, passphrase) {
   );
 
   return {
-    cipherText: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
-    iv: btoa(String.fromCharCode(...iv)),
-    salt: btoa(String.fromCharCode(...salt))
+    cipherText: uint8ArrayToBase64(new Uint8Array(encrypted)),
+    iv: uint8ArrayToBase64(iv),
+    salt: uint8ArrayToBase64(salt)
   };
 }
 
 /**
- * 10. Web Crypto API: Giải mã AES-GCM
+ * 12. Web Crypto API: Giải mã AES-GCM an toàn
  */
 export async function decryptData(encryptedObj, passphrase) {
   const enc = new TextEncoder();
   const dec = new TextDecoder();
 
-  const salt = Uint8Array.from(atob(encryptedObj.salt), c => c.charCodeAt(0));
-  const iv = Uint8Array.from(atob(encryptedObj.iv), c => c.charCodeAt(0));
-  const cipherBytes = Uint8Array.from(atob(encryptedObj.cipherText), c => c.charCodeAt(0));
+  const salt = base64ToUint8Array(encryptedObj.salt);
+  const iv = base64ToUint8Array(encryptedObj.iv);
+  const cipherBytes = base64ToUint8Array(encryptedObj.cipherText);
 
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
@@ -469,4 +500,19 @@ export async function decryptData(encryptedObj, passphrase) {
   );
 
   return dec.decode(decrypted);
+}
+
+/**
+ * 13. Thoát chuỗi HTML để hiển thị an toàn
+ * @param {string} text
+ * @returns {string}
+ */
+export function escapeHtml(text = '') {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

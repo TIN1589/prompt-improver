@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Prompt Improver — AI Prompt Optimizer",
-  "version": "1.3.0",
-  "description": "Tự động chèn nút ✨ Cải thiện vào ChatGPT, Claude.ai, Gemini, DeepSeek, Perplexity, Copilot. Gọi Gemini API tạo 2 phiên bản (Tối giản / Chi tiết), hoàn tác 1-click, cache thông minh.",
+  "name": "Prompt Improver — AI Prompt Optimizer & Benchmark",
+  "version": "2.0.0",
+  "description": "Tự động chèn nút ✨ Cải thiện vào ChatGPT, Claude.ai, Gemini, DeepSeek. Tích hợp Persona Strategy, chấm điểm chất lượng Prompt, tạo 2 bản Tối giản/Chi tiết.",
   "permissions": [
     "storage",
     "activeTab",

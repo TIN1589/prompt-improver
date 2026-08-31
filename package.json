@@ -1,20 +1,20 @@
 {
-  "name": "claude-code-prompt-optimizer",
-  "version": "1.0.0",
-  "description": "Local-first browser extension for optimizing prompts and reducing token usage in Claude Code free tier.",
+  "name": "prompt-improver",
+  "version": "2.0.0",
+  "description": "AI Prompt Optimizer & Multi-Metric Scoring Engine for Claude, ChatGPT, Gemini, DeepSeek.",
   "type": "module",
   "scripts": {
-    "test": "node test/test_optimizer.js",
+    "test": "node test/test_optimizer.js && node test/test_scoring_engine.js && node test/test_semantic_expander.js && node test/test_backend_mock.js && node test/syntax_check.js",
     "icons": "node generate_icons.js"
   },
   "keywords": [
-    "claude-code",
+    "prompt-improver",
     "prompt-engineering",
     "token-optimization",
     "chrome-extension",
     "manifest-v3",
-    "local-first"
+    "gemini-free-tier"
   ],
-  "author": "Antigravity Architect",
+  "author": "Antigravity Senior Architect",
   "license": "MIT"
 }

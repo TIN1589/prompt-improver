@@ -16,9 +16,13 @@ const JS_FILES = [
   'src/content.js',
   'src/background.js',
   'src/utils.js',
+  'src/scoringEngine.js',
+  'src/personaStrategies.js',
+  'src/types/prompt.js',
   'src/popup.js',
   'test/test_optimizer.js',
   'test/test_backend_mock.js',
+  'test/test_scoring_engine.js',
 ];
 
 // Lỗi runtime (không phải syntax) — bỏ qua
