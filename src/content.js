@@ -517,12 +517,15 @@ async function openImproveModal(promptText, selectedPersona = currentActivePerso
     });
 
     if (!res || !res.success) {
-      throw new Error(res?.error || 'Không nhận được phản hồi từ backend.');
+      const err = new Error(res?.error || 'Không nhận được phản hồi từ backend.');
+      err.isRateLimit = Boolean(res?.isRateLimit);
+      err.retryAfterSeconds = res?.retryAfterSeconds;
+      throw err;
     }
 
     renderModalContent(modal, promptText, res);
   } catch (err) {
-    renderModalError(modal, err.message);
+    renderModalError(modal, err.message, err, promptText);
   }
 }
 
@@ -689,20 +692,60 @@ function getScoreClass(score) {
 }
 
 // ─── RENDER LỖI VÀO MODAL ───────────────────────────────────────────────────
-function renderModalError(modal, errorMsg) {
+function renderModalError(modal, errorMsg, errObj = null, promptText = '') {
   const body = modal.querySelector('#piModalBody');
   const taskBadge = modal.querySelector('#piTaskBadge');
-  taskBadge.textContent = '❌ Lỗi';
 
-  body.innerHTML = `
-    <div class="pi-error-box">
-      <h4>Không thể cải thiện prompt</h4>
-      <p>${escapeHtml(errorMsg)}</p>
-    </div>
-    <div style="text-align: right; margin-top: 10px;">
-      <button class="pi-btn pi-btn-copy pi-btn-error-close">Đóng</button>
-    </div>
-  `;
+  const isRateLimit = Boolean(
+    errObj?.isRateLimit ||
+    errorMsg.includes('429') ||
+    errorMsg.includes('RATE_LIMIT') ||
+    errorMsg.includes('Quota') ||
+    errorMsg.includes('giới hạn')
+  );
+
+  const retrySeconds = errObj?.retryAfterSeconds || 15;
+
+  if (isRateLimit) {
+    taskBadge.textContent = '⏳ Giới hạn API (429)';
+    body.innerHTML = `
+      <div class="pi-ratelimit-box">
+        <h4>⏳ Tạm thời chạm giới hạn Gemini API</h4>
+        <p>Hạn mức yêu cầu miễn phí (Free Tier) đang tạm thời quá tải hoặc đang trong chu kỳ hồi phục (RPM/RPD).</p>
+        <div class="pi-ratelimit-tip">
+          💡 <strong>Gợi ý:</strong> Vui lòng đợi khoảng <strong>${escapeHtml(String(retrySeconds))} giây</strong> rồi bấm nút <em>"Thử lại ngay"</em> hoặc thử lại sau.
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;">
+        <button class="pi-btn pi-btn-copy pi-btn-error-close">Đóng</button>
+        ${promptText ? `<button class="pi-btn pi-btn-insert pi-btn-error-retry" id="piBtnErrorRetry">🔄 Thử lại ngay</button>` : ''}
+      </div>
+    `;
+
+    if (promptText) {
+      body.querySelector('#piBtnErrorRetry')?.addEventListener('click', () => {
+        openImproveModal(promptText, currentActivePersona);
+      });
+    }
+  } else {
+    taskBadge.textContent = '❌ Lỗi';
+    body.innerHTML = `
+      <div class="pi-error-box">
+        <h4>Không thể cải thiện prompt</h4>
+        <p>${escapeHtml(errorMsg)}</p>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;">
+        <button class="pi-btn pi-btn-copy pi-btn-error-close">Đóng</button>
+        ${promptText ? `<button class="pi-btn pi-btn-insert pi-btn-error-retry" id="piBtnErrorRetry">🔄 Thử lại ngay</button>` : ''}
+      </div>
+    `;
+
+    if (promptText) {
+      body.querySelector('#piBtnErrorRetry')?.addEventListener('click', () => {
+        openImproveModal(promptText, currentActivePersona);
+      });
+    }
+  }
 
   body.querySelector('.pi-btn-error-close')?.addEventListener('click', safelyCloseModal);
 }

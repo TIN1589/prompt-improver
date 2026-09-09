@@ -543,6 +543,40 @@
   color: var(--pi-error);
 }
 
+.pi-ratelimit-box {
+  background: var(--pi-surface);
+  border: var(--pi-border);
+  border-left: 5px solid var(--pi-accent-amber);
+  border-radius: var(--pi-radius-sm);
+  padding: 16px;
+  color: var(--pi-espresso);
+  box-shadow: 2px 2px 0px var(--pi-espresso);
+}
+
+.pi-ratelimit-box h4 {
+  margin: 0 0 8px 0;
+  font-family: var(--pi-font);
+  font-weight: 700;
+  color: #b45309;
+}
+
+.pi-ratelimit-box p {
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+  color: var(--pi-on-surface);
+}
+
+.pi-ratelimit-tip {
+  font-size: 12px;
+  background: var(--pi-sand);
+  border: 1px solid var(--pi-outline-variant);
+  border-radius: var(--pi-radius-sm);
+  padding: 8px 10px;
+  margin-top: 6px;
+  line-height: 1.4;
+  color: var(--pi-espresso);
+}
+
 /* ─── ANIMATIONS ──────────────────────────────────────────────────────────── */
 @keyframes pi-fade-in {
   from { opacity: 0; }

@@ -12,8 +12,9 @@
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GEMINI_MODELS = [
   'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
   'gemini-1.5-flash',
-  'gemini-1.5-pro'
+  'gemini-2.5-flash',
 ];
 
 // ─── CORS HEADERS ───────────────────────────────────────────────────────────
@@ -31,12 +32,13 @@ function getCorsHeaders(request, env) {
   };
 }
 
-function jsonResponse(data, status = 200, corsHeaders = {}) {
+function jsonResponse(data, status = 200, corsHeaders = {}, extraHeaders = {}) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       ...corsHeaders,
+      ...extraHeaders,
     },
   });
 }
@@ -121,6 +123,29 @@ BẮT BUỘC TRẢ VỀ DUY NHẤT 1 ĐỐI TƯỢNG JSON HỢP LỆ (KHÔNG KÈ
 Nếu prompt gốc là tiếng Việt, hãy viết bằng tiếng Việt. Nếu tiếng Anh, hãy viết bằng tiếng Anh.`;
 }
 
+// ─── TRÍCH XUẤT RETRY DELAY KHI GẶP RATE LIMIT 429 ──────────────────────────
+function extractRetryDelaySeconds(errText) {
+  try {
+    if (typeof errText === 'string') {
+      const match = errText.match(/retry in\s+([\d\.]+)s/i);
+      if (match) return Math.ceil(parseFloat(match[1]));
+      const parsed = JSON.parse(errText);
+      if (Array.isArray(parsed?.error?.details)) {
+        for (const detail of parsed.error.details) {
+          if (detail.retryDelay) {
+            const s = parseFloat(String(detail.retryDelay).replace('s', ''));
+            if (!isNaN(s)) return Math.ceil(s);
+          }
+        }
+      }
+      const msg = parsed?.error?.message || '';
+      const m = msg.match(/retry in\s+([\d\.]+)s/i);
+      if (m) return Math.ceil(parseFloat(m[1]));
+    }
+  } catch {}
+  return 15;
+}
+
 // ─── GỌI GEMINI API VỚI CHUỖI FALLBACK MODEL ───────────────────────────────
 async function callGemini(promptText, taskType, persona, apiKey) {
   const cleanKey = (apiKey || '').trim().replace(/^["']|["']$/g, '');
@@ -131,6 +156,8 @@ async function callGemini(promptText, taskType, persona, apiKey) {
   const systemInstruction = buildSystemInstruction(taskType, persona);
   const combinedPrompt = `${systemInstruction}\n\n====================\nPROMPT CẦN CẢI THIỆN:\n"""\n${promptText}\n"""`;
   const errorsList = [];
+  let rateLimitCount = 0;
+  let minRetryAfter = 15;
 
   for (const model of GEMINI_MODELS) {
     const url = `${GEMINI_BASE}/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
@@ -157,19 +184,24 @@ async function callGemini(promptText, taskType, persona, apiKey) {
 
       if (!res.ok) {
         const errText = await res.text();
-        errorsList.push(`[${model} HTTP ${res.status}]: ${errText.slice(0, 120)}`);
         
-        // Quota Rate Limit 429
+        // Quota Rate Limit 429: Ghi nhận và chuyển model tiếp theo trong danh sách fallback
         if (res.status === 429) {
-          throw new Error(`GEMINI_RATE_LIMIT (429): Quota exceeded. Chi tiết: ${errText}`);
+          rateLimitCount++;
+          const retryDelay = extractRetryDelaySeconds(errText);
+          if (retryDelay > minRetryAfter) minRetryAfter = retryDelay;
+          console.warn(`[Backend] Model ${model} gặp Rate Limit 429 (retryDelay ~${retryDelay}s). Đang chuyển sang model tiếp theo trong chuỗi fallback...`);
+          errorsList.push(`[${model} 429 RateLimit]: Quota exceeded (thử lại sau ~${retryDelay}s)`);
+          continue;
         }
 
-        // Lỗi xác thực API Key sai (401, 403)
+        // Lỗi xác thực API Key sai (401, 403): Dừng ngay vì API key sai thì mọi model đều hỏng
         if (res.status === 401 || res.status === 403) {
           throw new Error(`Lỗi Xác thực Gemini [${res.status}]: ${errText}`);
         }
 
-        // Nếu 400 hoặc 404 thì thử tiếp model sau
+        errorsList.push(`[${model} HTTP ${res.status}]: ${errText.slice(0, 120)}`);
+        // Nếu 400, 404 hoặc lỗi khác thì thử tiếp model sau
         continue;
       }
 
@@ -182,14 +214,26 @@ async function callGemini(promptText, taskType, persona, apiKey) {
         modelUsed: model,
       };
     } catch (err) {
-      if (err.message?.includes('GEMINI_RATE_LIMIT') || err.message?.includes('Lỗi Xác thực Gemini')) {
+      if (err.message?.includes('Lỗi Xác thực Gemini')) {
         throw err;
       }
       errorsList.push(`[${model}]: ${err.message}`);
     }
   }
 
-  throw new Error(`Không thể kết nối đến Gemini API qua các model (${GEMINI_MODELS.join(', ')}). Chi tiết: ${errorsList.join(' | ')}`);
+  // Nếu tất cả các model đều thất bại
+  const allRateLimited = rateLimitCount === GEMINI_MODELS.length;
+  const failureErr = new Error(
+    allRateLimited
+      ? `GEMINI_RATE_LIMIT (429): Tất cả các model (${GEMINI_MODELS.join(', ')}) đều vượt hạn mức quota. Vui lòng thử lại sau ~${minRetryAfter}s.`
+      : `Không thể kết nối đến Gemini API qua các model (${GEMINI_MODELS.join(', ')}). Chi tiết: ${errorsList.join(' | ')}`
+  );
+  if (rateLimitCount > 0) {
+    failureErr.isRateLimit = true;
+    failureErr.retryAfterSeconds = minRetryAfter;
+  }
+  failureErr.modelsAttempted = GEMINI_MODELS;
+  throw failureErr;
 }
 
 // ─── PARSE RESPONSE JSON AN TOÀN ────────────────────────────────────────────
@@ -300,16 +344,26 @@ export default {
           ...result,
         }, 200, corsHeaders);
       } catch (err) {
-        const isRateLimit = err.message?.includes('GEMINI_RATE_LIMIT') || err.message?.includes('429');
+        const isRateLimit = Boolean(err.isRateLimit || err.message?.includes('GEMINI_RATE_LIMIT') || err.message?.includes('429'));
         const status = isRateLimit ? 429 : 500;
+        const extraHeaders = {};
+        if (isRateLimit && err.retryAfterSeconds) {
+          extraHeaders['Retry-After'] = String(err.retryAfterSeconds);
+        }
         return jsonResponse(
           {
             success: false,
             error: isRateLimit ? 'RATE_LIMIT_EXCEEDED' : 'GEMINI_CALL_FAILED',
-            message: err.message,
+            message: isRateLimit
+              ? `Đã vượt quá giới hạn lượt gọi Gemini API (429 Quota Exceeded). Vui lòng thử lại sau ~${err.retryAfterSeconds || 15} giây.`
+              : err.message,
+            retryAfterSeconds: isRateLimit ? (err.retryAfterSeconds || 15) : undefined,
+            modelsAttempted: err.modelsAttempted || GEMINI_MODELS,
+            details: err.message,
           },
           status,
-          corsHeaders
+          corsHeaders,
+          extraHeaders
         );
       }
     }

@@ -233,6 +233,10 @@ async function handleRunQuickTest() {
     });
 
     if (!res || !res.success) {
+      if (res?.isRateLimit || res?.error?.includes('429') || res?.error?.includes('RATE_LIMIT') || res?.error?.includes('Quota')) {
+        const waitTime = res?.retryAfterSeconds || 15;
+        throw new Error(`⏳ Quá giới hạn Gemini API (Rate limit 429). Vui lòng đợi ~${waitTime}s trước khi thử lại.`);
+      }
       throw new Error(res?.error || 'Không nhận được kết quả từ backend.');
     }
 

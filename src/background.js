@@ -89,7 +89,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'IMPROVE_PROMPT': {
       handleImprovePrompt(request.payload || {})
         .then(res => sendResponse(res))
-        .catch(err => sendResponse({ success: false, error: err.message }));
+        .catch(err => {
+          const isRateLimit = Boolean(
+            err.isRateLimit ||
+            err.message?.includes('429') ||
+            err.message?.includes('RATE_LIMIT') ||
+            err.message?.includes('Quota')
+          );
+          sendResponse({
+            success: false,
+            error: err.message,
+            isRateLimit,
+            retryAfterSeconds: err.retryAfterSeconds || 15,
+          });
+        });
       return true; // Async response
     }
 
@@ -253,9 +266,18 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
 
       if (res.status === 429) {
         const errJson = await res.json().catch(() => ({}));
-        lastError = new Error(errJson.message || 'Quá giới hạn lượt gọi API (Rate limit 429)');
+        const retryAfterHeader = res.headers.get('Retry-After');
+        const retrySeconds = errJson.retryAfterSeconds || (retryAfterHeader ? parseInt(retryAfterHeader, 10) : 15);
+        
+        lastError = new Error(
+          errJson.message || `Quá giới hạn lượt gọi API Gemini (Rate limit 429). Vui lòng thử lại sau ~${retrySeconds}s.`
+        );
+        lastError.isRateLimit = true;
+        lastError.retryAfterSeconds = retrySeconds;
+
+        // Nếu còn lượt thử, chờ backoff (ưu tiên retrySeconds nhưng giới hạn max 5s tránh timeout extension)
         if (attempt < maxRetries - 1) {
-          const backoff = Math.min(1000 * (2 ** attempt), 6000);
+          const backoff = Math.min(Math.max((retrySeconds || 2) * 1000, 2000), 5000);
           await delay(backoff);
           continue;
         }
@@ -282,6 +304,7 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
     } catch (err) {
       lastError = err;
       if (
+        err.isRateLimit ||
         err.message?.includes('GEMINI_API_KEY') ||
         err.message?.includes('MISSING_API_KEY') ||
         err.message?.includes('API key not valid') ||
