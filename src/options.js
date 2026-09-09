@@ -1,4 +1,5 @@
 import { encryptData } from './utils.js';
+import { iconSvg } from './icons.js';
 
 const apiKeyInput = document.getElementById('apiKey');
 const passphraseInput = document.getElementById('passphrase');
@@ -141,7 +142,7 @@ async function renderTemplates() {
     div.className = 'template-item';
     div.innerHTML = `
       <span class="template-item-title">${escapeHtml(item.title)}</span>
-      <button class="btn btn-sm btn-danger btn-del" data-id="${item.id}">Xóa</button>
+      <button class="btn btn-sm btn-danger btn-del" data-id="${item.id}" aria-label="Xóa template">${iconSvg('i-trash', 'pi-icon-xs')} Xóa</button>
     `;
 
     div.querySelector('.btn-del').addEventListener('click', async () => {
@@ -196,7 +197,8 @@ async function handleImportTemplates(e) {
 }
 
 function showStatus(elem, text, type) {
-  elem.textContent = text;
+  const icon = type === 'success' ? iconSvg('i-check-circle', 'pi-icon-ok') : iconSvg('i-x-circle', 'pi-icon-danger');
+  elem.innerHTML = `${icon} <span>${escapeHtml(text)}</span>`;
   elem.className = `status-msg ${type}`;
   setTimeout(() => {
     elem.className = 'status-msg';

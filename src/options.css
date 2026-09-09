@@ -58,6 +58,17 @@
   --accent-blue-bg: #e0f2fe;
   --accent-blue: #0369a1;
 
+  --accent: #0E9C8E;
+  --accent-soft: #E4F5F2;
+  --warn: #B8760A;
+  --warn-soft: #FBF0DE;
+  --danger: #C4383B;
+  --danger-soft: #FBE9E9;
+  --ok: #1F8A4C;
+  --ok-soft: #E7F5EC;
+  --ink: #1B1E2B;
+  --ink-soft: #5B6274;
+
   --font-headline: 'Space Grotesk', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
 
@@ -67,6 +78,94 @@
   --radius-sm: 4px;
   --radius: 8px;
   --radius-md: 12px;
+}
+
+/* ─── ICON SYSTEM (SVG Line Icons 24x24 / Lucide geometry) ─────────────────── */
+.pi-icon,
+svg.pi-icon,
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  vertical-align: -2px;
+  flex-shrink: 0;
+  color: inherit;
+  box-sizing: content-box;
+}
+
+.pi-icon use,
+svg.pi-icon use {
+  width: 100%;
+  height: 100%;
+}
+
+/* Icon Sizes */
+.pi-icon.pi-icon-xs, svg.pi-icon.pi-icon-xs {
+  width: 11px !important;
+  height: 11px !important;
+  min-width: 11px !important;
+  min-height: 11px !important;
+  max-width: 11px !important;
+  max-height: 11px !important;
+}
+
+.pi-icon.pi-icon-sm, svg.pi-icon.pi-icon-sm {
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  min-height: 13px !important;
+  max-width: 13px !important;
+  max-height: 13px !important;
+}
+
+.pi-icon.pi-icon-md, svg.pi-icon.pi-icon-md {
+  width: 15px !important;
+  height: 15px !important;
+  min-width: 15px !important;
+  min-height: 15px !important;
+  max-width: 15px !important;
+  max-height: 15px !important;
+}
+
+.pi-icon.pi-icon-lg, svg.pi-icon.pi-icon-lg {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
+}
+
+.pi-icon.pi-icon-xl, svg.pi-icon.pi-icon-xl {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
+}
+
+/* Status Color Helpers */
+.pi-icon-accent { color: var(--accent) !important; }
+.pi-icon-warn   { color: var(--warn) !important; }
+.pi-icon-danger { color: var(--danger) !important; }
+.pi-icon-ok     { color: var(--ok) !important; }
+.pi-icon-ink    { color: var(--ink) !important; }
+
+/* Rotation animation */
+.pi-icon-spin {
+  animation: pi-icon-rotate 1s linear infinite;
+}
+
+@keyframes pi-icon-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* ─── RESET ───────────────────────────────────────────────────────────────── */
@@ -413,13 +512,17 @@ input[type="checkbox"]:checked::after {
 }
 
 .status-msg.success {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background: var(--accent-green-bg);
   color: var(--accent-green);
 }
 
 .status-msg.error {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background: var(--error-container);
   color: var(--on-error-container);
 }

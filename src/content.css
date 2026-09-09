@@ -27,6 +27,17 @@
   --pi-accent-green: #4ADE80;
   --pi-accent-amber: #f59e0b;
 
+  --pi-accent: #0E9C8E;
+  --pi-accent-soft: #E4F5F2;
+  --pi-warn: #B8760A;
+  --pi-warn-soft: #FBF0DE;
+  --pi-danger: #C4383B;
+  --pi-danger-soft: #FBE9E9;
+  --pi-ok: #1F8A4C;
+  --pi-ok-soft: #E7F5EC;
+  --pi-ink: #1B1E2B;
+  --pi-ink-soft: #5B6274;
+
   --pi-font: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --pi-font-body: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
@@ -42,6 +53,93 @@
   line-height: 1.5;
   color: var(--pi-espresso);
   box-sizing: border-box;
+}
+
+/* ─── ICON SYSTEM (SVG Line Icons 24x24 / Lucide geometry) ─────────────────── */
+.pi-icon,
+svg.pi-icon,
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  vertical-align: -2px;
+  flex-shrink: 0;
+  color: inherit;
+  box-sizing: content-box;
+}
+
+.pi-icon use,
+svg.pi-icon use {
+  width: 100%;
+  height: 100%;
+}
+
+/* Icon Sizes */
+.pi-icon.pi-icon-xs, svg.pi-icon.pi-icon-xs {
+  width: 11px !important;
+  height: 11px !important;
+  min-width: 11px !important;
+  min-height: 11px !important;
+  max-width: 11px !important;
+  max-height: 11px !important;
+}
+
+.pi-icon.pi-icon-sm, svg.pi-icon.pi-icon-sm {
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  min-height: 13px !important;
+  max-width: 13px !important;
+  max-height: 13px !important;
+}
+
+.pi-icon.pi-icon-md, svg.pi-icon.pi-icon-md {
+  width: 15px !important;
+  height: 15px !important;
+  min-width: 15px !important;
+  min-height: 15px !important;
+  max-width: 15px !important;
+  max-height: 15px !important;
+}
+
+.pi-icon.pi-icon-lg, svg.pi-icon.pi-icon-lg {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
+}
+
+.pi-icon.pi-icon-xl, svg.pi-icon.pi-icon-xl {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
+}
+
+/* Status Color Tokens */
+.icon-accent, .pi-icon-accent { color: var(--pi-accent) !important; }
+.icon-warn, .pi-icon-warn     { color: var(--pi-warn) !important; }
+.icon-danger, .pi-icon-danger { color: var(--pi-danger) !important; }
+.icon-ok, .pi-icon-ok         { color: var(--pi-ok) !important; }
+.icon-ink, .pi-icon-ink       { color: var(--pi-ink) !important; }
+
+/* Spin animation for loading state */
+.pi-icon-spin {
+  animation: pi-icon-spin 0.8s linear infinite;
+}
+@keyframes pi-icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* ─── RESET in Shadow DOM ─────────────────────────────────────────────────── */
@@ -91,7 +189,11 @@
 }
 
 .pi-inject-btn .pi-sparkle {
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
   animation: pi-pulse 2s infinite ease-in-out;
 }
 
@@ -124,6 +226,14 @@
   pointer-events: auto;
 }
 
+.pi-toast svg.pi-icon,
+.pi-toast .pi-icon {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  max-width: 14px !important;
+}
+
 .pi-toast.pi-toast-warning {
   border-left: 4px solid var(--pi-primary-container);
   background: #FFFBEB;
@@ -144,6 +254,14 @@
   cursor: pointer;
   box-shadow: 2px 2px 0px var(--pi-espresso);
   transition: all 0.15s ease;
+}
+
+.pi-toast-undo-btn svg.pi-icon,
+.pi-toast-undo-btn .pi-icon {
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 12px !important;
+  max-width: 12px !important;
 }
 
 .pi-toast-undo-btn:hover {
@@ -210,6 +328,17 @@
   font-weight: 700;
   color: var(--pi-primary);
   letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pi-title svg.pi-icon,
+.pi-title .pi-icon {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  max-width: 16px !important;
 }
 
 .pi-badge {
@@ -226,6 +355,14 @@
   color: var(--pi-on-primary-container);
 }
 
+.pi-badge svg.pi-icon,
+.pi-badge .pi-icon {
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 12px !important;
+  max-width: 12px !important;
+}
+
 .pi-badge-cached {
   background: #d1fae5;
   border-color: var(--pi-espresso);
@@ -233,17 +370,28 @@
 }
 
 .pi-btn-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--pi-surface-lowest);
   border: var(--pi-border);
   color: var(--pi-espresso);
-  font-size: 16px;
-  font-weight: 700;
   cursor: pointer;
-  padding: 4px 10px;
+  padding: 4px;
+  width: 26px;
+  height: 26px;
   border-radius: var(--pi-radius-sm);
   box-shadow: 2px 2px 0px var(--pi-espresso);
   transition: all 0.15s ease;
   line-height: 1;
+}
+
+.pi-btn-close .pi-icon,
+.pi-btn-close svg.pi-icon {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  max-width: 14px !important;
 }
 
 .pi-btn-close:hover {
@@ -289,6 +437,17 @@
   color: var(--pi-primary);
   user-select: none;
   outline: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pi-original-box summary svg.pi-icon,
+.pi-original-box summary .pi-icon {
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  max-width: 13px !important;
 }
 
 .pi-original-text {
@@ -346,6 +505,14 @@
   align-items: center;
   gap: 6px;
   color: var(--pi-espresso);
+}
+
+.pi-card-title svg.pi-icon,
+.pi-card-title .pi-icon {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  max-width: 14px !important;
 }
 
 /* Minimal card — amber accent */
@@ -416,6 +583,14 @@
   letter-spacing: 0.01em;
 }
 
+.pi-btn svg.pi-icon,
+.pi-btn .pi-icon {
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  max-width: 13px !important;
+}
+
 .pi-btn:active {
   box-shadow: 0px 0px 0px var(--pi-espresso) !important;
   transform: translate(2px, 2px);
@@ -473,6 +648,14 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.pi-assumptions-title svg.pi-icon,
+.pi-assumptions-title .pi-icon {
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  max-width: 13px !important;
 }
 
 .pi-assumptions-list {
@@ -541,6 +724,16 @@
   font-family: var(--pi-font);
   font-weight: 700;
   color: var(--pi-error);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pi-error-box h4 svg.pi-icon {
+  width: 15px !important;
+  height: 15px !important;
+  min-width: 15px !important;
+  max-width: 15px !important;
 }
 
 .pi-ratelimit-box {
@@ -558,6 +751,16 @@
   font-family: var(--pi-font);
   font-weight: 700;
   color: #b45309;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pi-ratelimit-box h4 svg.pi-icon {
+  width: 15px !important;
+  height: 15px !important;
+  min-width: 15px !important;
+  max-width: 15px !important;
 }
 
 .pi-ratelimit-box p {
@@ -575,6 +778,17 @@
   margin-top: 6px;
   line-height: 1.4;
   color: var(--pi-espresso);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.pi-ratelimit-tip svg.pi-icon {
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  max-width: 13px !important;
+  margin-top: 2px;
 }
 
 /* ─── ANIMATIONS ──────────────────────────────────────────────────────────── */
@@ -625,6 +839,14 @@
   box-shadow: 2px 2px 0px var(--pi-espresso);
 }
 
+.pi-persona-chip .pi-icon,
+.pi-persona-chip svg.pi-icon {
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 12px !important;
+  max-width: 12px !important;
+}
+
 .pi-persona-chip:hover {
   background: var(--pi-sand);
   transform: translate(-1px, -1px);
@@ -659,12 +881,31 @@
   font-size: 13px;
   font-weight: 700;
   color: var(--pi-espresso);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pi-score-title svg.pi-icon,
+.pi-score-title .pi-icon {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  max-width: 14px !important;
 }
 
 .pi-score-badge-group {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.pi-score-badge-group svg.pi-icon,
+.pi-score-badge-group .pi-icon {
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  max-width: 13px !important;
 }
 
 .pi-score-badge {

@@ -3,6 +3,7 @@
  */
 
 import { escapeHtml } from './utils.js';
+import { iconSvg } from './icons.js';
 
 const SITE_LABELS = {
   'chatgpt.com': 'ChatGPT (chatgpt.com)',
@@ -139,7 +140,7 @@ async function handleSaveSettings() {
     enableCache,
   });
 
-  showAlert(pingResult, '✅ Đã lưu cấu hình thành công!', 'success');
+  showAlert(pingResult, `${iconSvg('i-check-circle', 'pi-icon-ok')} Đã lưu cấu hình thành công!`, 'success');
   if (url) {
     checkServerStatus(url);
   }
@@ -149,12 +150,12 @@ async function handleSaveSettings() {
 async function handlePingBackend() {
   const url = inputBackendUrl.value.trim();
   if (!url) {
-    showAlert(pingResult, '⚠️ Vui lòng nhập URL Backend Cloudflare Worker.', 'error');
+    showAlert(pingResult, `${iconSvg('i-warn', 'pi-icon-warn')} Vui lòng nhập URL Backend Cloudflare Worker.`, 'error');
     return;
   }
 
   btnPingBackend.disabled = true;
-  btnPingBackend.textContent = '⏳ Đang kiểm tra...';
+  btnPingBackend.innerHTML = `${iconSvg('i-refresh', 'pi-icon-spin')} Đang kiểm tra...`;
 
   try {
     const res = await chrome.runtime.sendMessage({
@@ -163,19 +164,20 @@ async function handlePingBackend() {
     });
 
     if (res && res.online) {
-      const msg = `🟢 Kết nối thành công (${res.latencyMs}ms)! ${res.info} ${res.hasApiKey ? '• Có API Key' : '• ⚠️ Chưa có API Key'}`;
+      const keyNotice = res.hasApiKey ? '• Có API Key' : `• ${iconSvg('i-warn', 'pi-icon-warn')} Chưa có API Key`;
+      const msg = `${iconSvg('i-dot', 'pi-icon-ok')} Kết nối thành công (${res.latencyMs}ms)! ${escapeHtml(res.info || '')} ${keyNotice}`;
       showAlert(pingResult, msg, 'success');
       updateStatusBadge(true, `${res.latencyMs}ms`);
     } else {
-      showAlert(pingResult, `🔴 Không thể kết nối: ${res?.error || 'Lỗi mạng'}`, 'error');
+      showAlert(pingResult, `${iconSvg('i-x-circle', 'pi-icon-danger')} Không thể kết nối: ${escapeHtml(res?.error || 'Lỗi mạng')}`, 'error');
       updateStatusBadge(false, 'Offline');
     }
   } catch (err) {
-    showAlert(pingResult, `🔴 Lỗi: ${err.message}`, 'error');
+    showAlert(pingResult, `${iconSvg('i-x-circle', 'pi-icon-danger')} Lỗi: ${escapeHtml(err.message)}`, 'error');
     updateStatusBadge(false, 'Lỗi');
   } finally {
     btnPingBackend.disabled = false;
-    btnPingBackend.textContent = '🔍 Kiểm tra kết nối';
+    btnPingBackend.innerHTML = `${iconSvg('i-wifi')} Kiểm tra kết nối`;
   }
 }
 
@@ -209,7 +211,7 @@ async function loadCacheStats() {
 async function handleClearCache() {
   chrome.runtime.sendMessage({ action: 'CLEAR_CACHE' }, () => {
     txtCacheCount.textContent = '0 mục';
-    showAlert(pingResult, '🗑️ Đã xóa sạch cache prompt!', 'success');
+    showAlert(pingResult, `${iconSvg('i-check-circle', 'pi-icon-ok')} Đã xóa sạch cache prompt!`, 'success');
   });
 }
 
@@ -217,12 +219,12 @@ async function handleClearCache() {
 async function handleRunQuickTest() {
   const prompt = testPromptInput.value.trim();
   if (!prompt) {
-    showAlert(testAlert, '⚠️ Vui lòng nhập prompt cần thử nghiệm!', 'error');
+    showAlert(testAlert, `${iconSvg('i-warn', 'pi-icon-warn')} Vui lòng nhập prompt cần thử nghiệm!`, 'error');
     return;
   }
 
   btnRunTest.disabled = true;
-  btnRunTest.textContent = '⏳ Đang tối ưu hóa...';
+  btnRunTest.innerHTML = `${iconSvg('i-refresh', 'pi-icon-spin')} Đang tối ưu hóa...`;
   testResultBox.style.display = 'none';
   testAlert.style.display = 'none';
 
@@ -235,7 +237,7 @@ async function handleRunQuickTest() {
     if (!res || !res.success) {
       if (res?.isRateLimit || res?.error?.includes('429') || res?.error?.includes('RATE_LIMIT') || res?.error?.includes('Quota')) {
         const waitTime = res?.retryAfterSeconds || 15;
-        throw new Error(`⏳ Quá giới hạn Gemini API (Rate limit 429). Vui lòng đợi ~${waitTime}s trước khi thử lại.`);
+        throw new Error(`Quá giới hạn Gemini API (Rate limit 429). Vui lòng đợi ~${waitTime}s trước khi thử lại.`);
       }
       throw new Error(res?.error || 'Không nhận được kết quả từ backend.');
     }
@@ -253,10 +255,10 @@ async function handleRunQuickTest() {
     testResultBox.style.display = 'block';
     loadCacheStats();
   } catch (err) {
-    showAlert(testAlert, `🔴 ${err.message}`, 'error');
+    showAlert(testAlert, `${iconSvg('i-x-circle', 'pi-icon-danger')} ${escapeHtml(err.message)}`, 'error');
   } finally {
     btnRunTest.disabled = false;
-    btnRunTest.textContent = '⚡ Cải thiện ngay';
+    btnRunTest.innerHTML = `${iconSvg('i-spark')} Cải thiện ngay`;
   }
 }
 
@@ -277,24 +279,24 @@ async function loadHistory() {
     div.className = 'pi-history-item';
     div.innerHTML = `
       <div class="pi-history-header">
-        <span class="pi-badge-sm">${item.persona || item.taskType || 'prompt'}</span>
-        ${item.improvedScore ? `<span class="pi-badge-sm" style="background:#dcfce7;color:#15803d;border-color:#15803d;">⭐ ${item.improvedScore}/100</span>` : ''}
+        <span class="pi-badge-sm">${escapeHtml(item.persona || item.taskType || 'prompt')}</span>
+        ${item.improvedScore ? `<span class="pi-badge-sm" style="background:#dcfce7;color:#15803d;border-color:#15803d;display:inline-flex;align-items:center;gap:3px;">${iconSvg('i-star', 'pi-icon-warn', 'style="width:12px;height:12px;"')} ${item.improvedScore}/100</span>` : ''}
         <span class="pi-history-date">${dateStr}</span>
       </div>
       <div class="pi-history-prompt" title="${escapeHtml(item.prompt)}">
         <strong>Gốc:</strong> ${escapeHtml(item.prompt)}
       </div>
       <div class="pi-btn-row" style="margin-top: 6px;">
-        <button class="pi-btn-copy-sm" data-copy="min">📋 Chép Tối giản</button>
-        <button class="pi-btn-copy-sm" data-copy="det">📋 Chép Chi tiết</button>
+        <button class="pi-btn-copy-sm" data-copy="min">${iconSvg('i-copy')} Chép Tối giản</button>
+        <button class="pi-btn-copy-sm" data-copy="det">${iconSvg('i-copy')} Chép Chi tiết</button>
       </div>
     `;
 
     div.querySelector('[data-copy="min"]').addEventListener('click', (e) => {
-      copyText(item.minimal, e.target);
+      copyText(item.minimal, e.currentTarget);
     });
     div.querySelector('[data-copy="det"]').addEventListener('click', (e) => {
-      copyText(item.detailed, e.target);
+      copyText(item.detailed, e.currentTarget);
     });
 
     historyListContainer.appendChild(div);
@@ -314,10 +316,10 @@ async function copyText(text, btnEl) {
   if (!text) return;
   try {
     await navigator.clipboard.writeText(text);
-    const oldText = btnEl.textContent;
-    btnEl.textContent = '✔ Đã chép!';
+    const oldHtml = btnEl.innerHTML;
+    btnEl.innerHTML = `${iconSvg('i-check', 'pi-icon-ok')} Đã chép!`;
     setTimeout(() => {
-      btnEl.textContent = oldText;
+      btnEl.innerHTML = oldHtml;
     }, 1500);
   } catch (e) {
     console.warn('Lỗi chép clipboard:', e);
@@ -326,6 +328,6 @@ async function copyText(text, btnEl) {
 
 function showAlert(el, msg, type = 'success') {
   el.className = `pi-alert-box ${type === 'success' ? 'pi-alert-success' : 'pi-alert-error'}`;
-  el.textContent = msg;
+  el.innerHTML = msg;
   el.style.display = 'block';
 }
