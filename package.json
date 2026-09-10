@@ -4,7 +4,12 @@
   "description": "AI Prompt Optimizer & Multi-Metric Scoring Engine for Claude, ChatGPT, Gemini, DeepSeek.",
   "type": "module",
   "scripts": {
-    "test": "node test/test_optimizer.js && node test/test_scoring_engine.js && node test/test_semantic_expander.js && node test/test_backend_mock.js && node test/syntax_check.js",
+    "build": "node scripts/build.js",
+    "dev": "node scripts/build.js",
+    "type-check": "tsc --noEmit",
+    "test:legacy": "node test/test_optimizer.js && node test/test_scoring_engine.js && node test/test_semantic_expander.js && node test/test_backend_mock.js && node test/syntax_check.js",
+    "test:unit": "vitest run",
+    "test": "npm run type-check && npm run test:legacy && npm run test:unit",
     "icons": "node generate_icons.js"
   },
   "keywords": [
@@ -16,5 +21,12 @@
     "gemini-free-tier"
   ],
   "author": "Antigravity Senior Architect",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "^0.2.9",
+    "@types/node": "^22.20.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0"
+  }
 }
