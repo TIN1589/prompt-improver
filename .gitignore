@@ -71,3 +71,8 @@ desktop.ini
 # Logs
 logs/
 *.log
+
+# Documents
+docx/
+*.docx
+*.doc
