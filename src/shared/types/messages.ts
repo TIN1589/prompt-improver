@@ -16,6 +16,7 @@ export type ExtensionMessage =
         persona?: PersonaId;
         bypassCache?: boolean;
         taskType?: TaskType;
+        mode?: 'instant' | 'cloud' | 'hybrid';
       };
     }
   | {
@@ -70,6 +71,7 @@ export interface PromptImproveResult {
   minimalScore: PromptScore;
   detailedScore: PromptScore;
   isCached: boolean;
+  engine?: 'instant' | 'cloud';
 }
 
 export interface PingResult {

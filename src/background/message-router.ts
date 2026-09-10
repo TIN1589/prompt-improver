@@ -21,6 +21,7 @@ import {
 } from '../shared/errors/extension-error';
 import { ClassifyTaskUseCase } from '../core/use-cases/classify-task.use-case';
 import { ScorePromptUseCase } from '../core/use-cases/score-prompt.use-case';
+import { ImprovePromptLocalUseCase } from '../core/use-cases/improve-prompt-local.use-case';
 import { hashPrompt } from '../shared/utils/crypto';
 import { isPlaceholderUrl } from '../shared/utils/url';
 import { SettingsRepository } from '../infrastructure/storage/settings.repository';
@@ -156,13 +157,14 @@ export class MessageRouter {
   }
 
   /**
-   * Xử lý tối ưu prompt: chấm điểm, kiểm tra cache, gọi backend và lưu lịch sử
+   * Xử lý tối ưu prompt: chấm điểm, kiểm tra cache, gọi backend hoặc Local Engine và lưu lịch sử
    */
   private static async handleImprovePrompt(payload: {
     prompt: string;
     persona?: PersonaId;
     bypassCache?: boolean;
     taskType?: TaskType;
+    mode?: 'instant' | 'cloud' | 'hybrid';
   }): Promise<PromptImproveResult> {
     const cleanPrompt = payload.prompt?.trim();
     if (!cleanPrompt) {
@@ -171,16 +173,42 @@ export class MessageRouter {
 
     const persona = payload.persona || 'developer';
     const taskType = payload.taskType || ClassifyTaskUseCase.execute(cleanPrompt);
+    const mode = payload.mode || 'instant';
     const hash = await hashPrompt(`${persona}:${cleanPrompt}`);
 
     const settings = await SettingsRepository.getSettings();
     const enableCache = settings.enableCache !== false;
     const cacheTtlMs = settings.cacheTtlMs;
+    const backendUrl = settings.backendUrl?.trim() || '';
+    const hasValidBackend = Boolean(backendUrl && !isPlaceholderUrl(backendUrl));
 
-    // 1. Chấm điểm prompt gốc
+    // 1. Chế độ Siêu tốc (Instant Engine) hoặc khi chưa cấu hình Cloudflare Worker
+    if (mode === 'instant' || !hasValidBackend) {
+      const localResult = ImprovePromptLocalUseCase.execute({
+        prompt: cleanPrompt,
+        persona,
+        taskType,
+      });
+
+      // Lưu vào Lịch sử ngầm (không chặn response)
+      HistoryRepository.saveItem({
+        id: 'hist_' + Date.now(),
+        prompt: cleanPrompt,
+        minimal: localResult.minimal,
+        detailed: localResult.detailed,
+        assumptions: localResult.assumptions || [],
+        taskType: localResult.taskType,
+        persona,
+        originalScore: localResult.originalScore.overallScore,
+        improvedScore: localResult.detailedScore.overallScore,
+        timestamp: Date.now(),
+      }).catch((e) => console.error('Failed to save history item:', e));
+
+      return localResult;
+    }
+
+    // 2. Chế độ Cloud / Hybrid: Kiểm tra Cache trước
     const originalScore = ScorePromptUseCase.evaluate(cleanPrompt);
-
-    // 2. Kiểm tra Cache
     if (enableCache && !payload.bypassCache) {
       const cached = await CacheRepository.get<PromptImproveResult>(hash, cacheTtlMs);
       if (cached) {
@@ -192,55 +220,59 @@ export class MessageRouter {
       }
     }
 
-    // 3. Gọi Cloudflare Worker Backend
-    const backendUrl = settings.backendUrl?.trim() || '';
-    if (!backendUrl || isPlaceholderUrl(backendUrl)) {
-      throw new BackendConfigurationMissingError(
-        'Chưa cấu hình Backend URL hoặc URL đang chứa mẫu placeholder (xxx.workers.dev). Vui lòng cấu hình URL Cloudflare Worker hợp lệ tại tab Cấu hình.'
-      );
+    // 3. Gọi Cloudflare Worker Backend (với Fallback an toàn cho Hybrid)
+    try {
+      const responseData = await WorkerClient.improvePrompt(backendUrl, {
+        prompt: cleanPrompt,
+        taskType,
+        persona,
+      });
+
+      const minimalScore = ScorePromptUseCase.evaluate(responseData.minimal || cleanPrompt);
+      const detailedScore = ScorePromptUseCase.evaluate(responseData.detailed || cleanPrompt);
+
+      const result: PromptImproveResult = {
+        minimal: responseData.minimal,
+        detailed: responseData.detailed,
+        assumptions: responseData.assumptions || [],
+        taskType: responseData.taskType || taskType,
+        persona,
+        originalScore,
+        minimalScore,
+        detailedScore,
+        isCached: false,
+        engine: 'cloud',
+      };
+
+      if (enableCache && responseData.success) {
+        await CacheRepository.set(hash, result, settings.maxCacheEntries);
+      }
+
+      await HistoryRepository.saveItem({
+        id: 'hist_' + Date.now(),
+        prompt: cleanPrompt,
+        minimal: responseData.minimal,
+        detailed: responseData.detailed,
+        assumptions: responseData.assumptions || [],
+        taskType: result.taskType,
+        persona,
+        originalScore: originalScore.overallScore,
+        improvedScore: detailedScore.overallScore,
+        timestamp: Date.now(),
+      });
+
+      return result;
+    } catch (err: unknown) {
+      // Nếu là chế độ hybrid, tự động fallback sang Local Engine khi Cloud gặp sự cố
+      if (mode === 'hybrid') {
+        console.warn('[MessageRouter] Cloud AI lỗi, tự động chuyển sang Instant Local Engine:', err);
+        return ImprovePromptLocalUseCase.execute({
+          prompt: cleanPrompt,
+          persona,
+          taskType,
+        });
+      }
+      throw err;
     }
-
-    const responseData = await WorkerClient.improvePrompt(backendUrl, {
-      prompt: cleanPrompt,
-      taskType,
-      persona,
-    });
-
-    // 4. Chấm điểm cho 2 bản prompt được tạo
-    const minimalScore = ScorePromptUseCase.evaluate(responseData.minimal || cleanPrompt);
-    const detailedScore = ScorePromptUseCase.evaluate(responseData.detailed || cleanPrompt);
-
-    const result: PromptImproveResult = {
-      minimal: responseData.minimal,
-      detailed: responseData.detailed,
-      assumptions: responseData.assumptions || [],
-      taskType: responseData.taskType || taskType,
-      persona,
-      originalScore,
-      minimalScore,
-      detailedScore,
-      isCached: false,
-    };
-
-    // 5. Lưu Cache
-    if (enableCache && responseData.success) {
-      await CacheRepository.set(hash, result, settings.maxCacheEntries);
-    }
-
-    // 6. Lưu vào Lịch sử
-    await HistoryRepository.saveItem({
-      id: 'hist_' + Date.now(),
-      prompt: cleanPrompt,
-      minimal: responseData.minimal,
-      detailed: responseData.detailed,
-      assumptions: responseData.assumptions || [],
-      taskType: result.taskType,
-      persona,
-      originalScore: originalScore.overallScore,
-      improvedScore: detailedScore.overallScore,
-      timestamp: Date.now(),
-    });
-
-    return result;
   }
 }

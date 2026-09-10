@@ -347,18 +347,6 @@ async function handleRunQuickTest(dom: PopupElements): Promise<void> {
     return;
   }
 
-  // Kiểm tra trước URL Backend trong cấu hình
-  const settings = await SettingsRepository.getSettings();
-  const backendUrl = settings.backendUrl?.trim() || '';
-  if (!backendUrl || isPlaceholderUrl(backendUrl)) {
-    showTestAlert(
-      dom,
-      'Chưa cấu hình URL Cloudflare Worker hợp lệ! Vui lòng chuyển sang tab "Cấu hình" để nhập URL Worker của bạn.',
-      'error'
-    );
-    return;
-  }
-
   if (dom.btnRunTest) {
     dom.btnRunTest.disabled = true;
     dom.btnRunTest.innerHTML = `${iconSvg('i-refresh', 'pi-icon-spin')} Đang tối ưu...`;
@@ -368,7 +356,7 @@ async function handleRunQuickTest(dom: PopupElements): Promise<void> {
   try {
     const res = await MessageClient.send<PromptImproveResult>({
       type: 'PROMPT:IMPROVE',
-      payload: { prompt, persona: 'developer' },
+      payload: { prompt, persona: 'developer', mode: 'instant' },
     });
 
     if (dom.testMinText) dom.testMinText.textContent = res.minimal || '';
@@ -382,7 +370,7 @@ async function handleRunQuickTest(dom: PopupElements): Promise<void> {
     }
 
     if (dom.testResultBox) dom.testResultBox.style.display = 'block';
-    showTestAlert(dom, 'Đã tối ưu thành công!', 'success');
+    showTestAlert(dom, '⚡ Đã tối ưu siêu tốc (< 20ms)!', 'success');
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     showTestAlert(dom, msg, 'error');

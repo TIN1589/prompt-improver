@@ -61,9 +61,15 @@ export async function openImproveModal(
       <div class="pi-header-left">
         <h3 class="pi-title">${iconSvg('i-spark', 'pi-icon-accent')} Prompt Improver</h3>
         <span id="piTaskBadge" class="pi-badge">Đang phân tích...</span>
+        <span id="piEngineBadge" class="pi-badge pi-badge-instant">${iconSvg('i-bolt', 'pi-icon-accent')} <span>Siêu tốc</span></span>
         <span id="piCacheBadge" class="pi-badge pi-badge-cached" style="display: none;">${iconSvg('i-bolt', 'pi-icon-ok')} Cache</span>
       </div>
-      <button id="piBtnClose" class="pi-btn-close" title="Đóng (Esc)" aria-label="Đóng">${iconSvg('i-x')}</button>
+      <div class="pi-header-right" style="display: flex; align-items: center; gap: 8px;">
+        <button id="piBtnUpgradeCloud" class="pi-btn-upgrade" style="display: none;" title="Nâng cấp chất lượng chi tiết hơn với Gemini Cloud AI">
+          ${iconSvg('i-spark')} <span>Nâng cấp AI</span>
+        </button>
+        <button id="piBtnClose" class="pi-btn-close" title="Đóng (Esc)" aria-label="Đóng">${iconSvg('i-x')}</button>
+      </div>
     </div>
 
     <!-- Persona Selector Bar -->
@@ -81,8 +87,7 @@ export async function openImproveModal(
     <div id="piModalBody" class="pi-body">
       <div class="pi-skeleton-box">
         <div class="pi-spinner"></div>
-        <div class="pi-loading-text">Đang tối ưu hóa prompt với Gemini...</div>
-        <div class="pi-loading-subtext">Đang kết nối AI, phân tích bối cảnh và tạo 2 phiên bản (khoảng 5-15 giây)</div>
+        <div class="pi-loading-text">Đang tối ưu hóa prompt siêu tốc...</div>
       </div>
     </div>
   `;
@@ -115,10 +120,35 @@ export async function openImproveModal(
     });
   });
 
+  // Gắn sự kiện Nâng cấp Cloud AI (Async, không chặn giao diện)
+  const upgradeBtn = modal.querySelector<HTMLButtonElement>('#piBtnUpgradeCloud');
+  upgradeBtn?.addEventListener('click', async () => {
+    if (upgradeBtn.disabled) return;
+    upgradeBtn.disabled = true;
+    const oldHtml = upgradeBtn.innerHTML;
+    upgradeBtn.innerHTML = `${iconSvg('i-refresh', 'pi-icon-spin')} <span>Đang gọi AI...</span>`;
+
+    try {
+      const cloudRes = await MessageClient.send<PromptImproveResult>({
+        type: 'PROMPT:IMPROVE',
+        payload: { prompt: promptText, persona: currentActivePersona, mode: 'cloud' },
+      });
+      renderModalContent(modal, promptText, cloudRes, onApply);
+    } catch (err: unknown) {
+      upgradeBtn.disabled = false;
+      const isRateLimit = String(err).includes('429') || String(err).includes('RATE_LIMIT') || String(err).includes('Quota');
+      upgradeBtn.innerHTML = `${iconSvg('i-clock', 'pi-icon-warn')} <span>${isRateLimit ? 'AI 429 (Bận)' : 'AI không phản hồi'}</span>`;
+      setTimeout(() => {
+        upgradeBtn.innerHTML = oldHtml;
+      }, 4000);
+    }
+  });
+
   try {
+    // Gọi Instant Engine để phản hồi < 20ms
     const res = await MessageClient.send<PromptImproveResult>({
       type: 'PROMPT:IMPROVE',
-      payload: { prompt: promptText, persona: currentActivePersona },
+      payload: { prompt: promptText, persona: currentActivePersona, mode: 'instant' },
     });
 
     renderModalContent(modal, promptText, res, onApply);
@@ -135,7 +165,9 @@ function renderModalContent(
 ): void {
   const body = modal.querySelector('#piModalBody');
   const taskBadge = modal.querySelector('#piTaskBadge');
+  const engineBadge = modal.querySelector('#piEngineBadge');
   const cacheBadge = modal.querySelector('#piCacheBadge');
+  const upgradeBtn = modal.querySelector<HTMLButtonElement>('#piBtnUpgradeCloud');
   if (!body) return;
 
   const task = TASK_TYPE_CONFIG[data.taskType] || TASK_TYPE_CONFIG.general;
@@ -143,9 +175,27 @@ function renderModalContent(
     taskBadge.innerHTML = `${iconSvg(task.iconId)} <span>${escapeHtml(task.label)}</span>`;
   }
 
+  if (engineBadge) {
+    if (data.engine === 'cloud') {
+      engineBadge.className = 'pi-badge pi-badge-cloud';
+      engineBadge.innerHTML = `${iconSvg('i-spark', 'pi-icon-ok')} <span>Gemini AI</span>`;
+      if (upgradeBtn) upgradeBtn.style.display = 'none';
+    } else {
+      engineBadge.className = 'pi-badge pi-badge-instant';
+      engineBadge.innerHTML = `${iconSvg('i-bolt', 'pi-icon-accent')} <span>Siêu tốc</span>`;
+      if (upgradeBtn) {
+        upgradeBtn.style.display = 'inline-flex';
+        upgradeBtn.disabled = false;
+        upgradeBtn.innerHTML = `${iconSvg('i-spark')} <span>Nâng cấp AI</span>`;
+      }
+    }
+  }
+
   if (data.isCached && cacheBadge) {
     cacheBadge.innerHTML = `${iconSvg('i-bolt', 'pi-icon-ok')} <span>Cache</span>`;
     (cacheBadge as HTMLElement).style.display = 'inline-flex';
+  } else if (cacheBadge) {
+    (cacheBadge as HTMLElement).style.display = 'none';
   }
 
   const origTokens = estimateTokens(originalPrompt);

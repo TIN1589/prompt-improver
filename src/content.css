@@ -369,6 +369,64 @@ svg.pi-icon use {
   color: #065f46;
 }
 
+.pi-badge-instant {
+  background: #fef3c7;
+  border-color: #b45309;
+  color: #92400e;
+}
+
+.pi-badge-cloud {
+  background: #e0e7ff;
+  border-color: #4338ca;
+  color: #3730a3;
+}
+
+.pi-btn-upgrade {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  background: var(--pi-primary-container);
+  border: var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  font-family: var(--pi-font);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pi-on-primary-container);
+  cursor: pointer;
+  box-shadow: 2px 2px 0px var(--pi-espresso);
+  transition: all 0.15s ease;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.pi-btn-upgrade svg.pi-icon,
+.pi-btn-upgrade .pi-icon {
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 12px !important;
+  max-width: 12px !important;
+}
+
+.pi-btn-upgrade:hover {
+  background: #fbbf24;
+  box-shadow: 3px 3px 0px var(--pi-espresso);
+  transform: translate(-1px, -1px);
+}
+
+.pi-btn-upgrade:active {
+  box-shadow: 0px 0px 0px var(--pi-espresso);
+  transform: translate(1px, 1px);
+}
+
+.pi-btn-upgrade:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 2px 2px 0px var(--pi-espresso);
+}
+
 .pi-btn-close {
   display: inline-flex;
   align-items: center;
