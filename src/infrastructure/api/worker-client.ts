@@ -5,6 +5,7 @@
 import { ApiRateLimitError, NetworkUnavailableError, BackendConfigurationMissingError } from '../../shared/errors/extension-error';
 import type { TaskType } from '../../core/models/task-type.entity';
 import type { PersonaId } from '../../core/models/persona.entity';
+import { normalizeBackendUrl } from '../../shared/utils/url';
 
 export interface ImproveRequestBody {
   prompt: string;
@@ -32,7 +33,7 @@ export class WorkerClient {
     body: ImproveRequestBody,
     maxRetries: number = 3
   ): Promise<ImproveResponseBody> {
-    const rawUrl = (backendUrl || '').trim().replace(/\/+$/, '');
+    const rawUrl = normalizeBackendUrl(backendUrl);
     if (!rawUrl) {
       throw new BackendConfigurationMissingError();
     }

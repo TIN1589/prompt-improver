@@ -4,10 +4,11 @@
 
 import type { PingResult } from '../../shared/types/messages';
 import { NetworkUnavailableError, BackendConfigurationMissingError } from '../../shared/errors/extension-error';
+import { normalizeBackendUrl } from '../../shared/utils/url';
 
 export class PingClient {
   static async ping(rawUrl: string): Promise<PingResult> {
-    const url = (rawUrl || '').trim().replace(/\/+$/, '');
+    const url = normalizeBackendUrl(rawUrl);
     if (!url) {
       throw new BackendConfigurationMissingError('Vui lòng nhập Backend URL.');
     }

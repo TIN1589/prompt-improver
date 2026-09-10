@@ -8,96 +8,131 @@ import { iconSvg } from '../../shared/utils/svg-icons';
 import { escapeHtml } from '../../shared/utils/entity-extractor';
 import type { CustomTemplate } from '../../shared/types/settings';
 
-const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement;
-const passphraseInput = document.getElementById('passphrase') as HTMLInputElement;
-const btnSaveApiKey = document.getElementById('btnSaveApiKey') as HTMLButtonElement;
-const btnRemoveApiKey = document.getElementById('btnRemoveApiKey') as HTMLButtonElement;
-const keyStatus = document.getElementById('keyStatus') as HTMLElement;
+interface OptionElements {
+  apiKeyInput: HTMLInputElement | null;
+  passphraseInput: HTMLInputElement | null;
+  btnSaveApiKey: HTMLButtonElement | null;
+  btnRemoveApiKey: HTMLButtonElement | null;
+  keyStatus: HTMLElement | null;
 
-const defaultModeSelect = document.getElementById('defaultMode') as HTMLSelectElement;
-const enableContextMenuCheckbox = document.getElementById('enableContextMenu') as HTMLInputElement;
-const btnSavePreferences = document.getElementById('btnSavePreferences') as HTMLButtonElement;
-const prefStatus = document.getElementById('prefStatus') as HTMLElement;
+  defaultModeSelect: HTMLSelectElement | null;
+  enableContextMenuCheckbox: HTMLInputElement | null;
+  btnSavePreferences: HTMLButtonElement | null;
+  prefStatus: HTMLElement | null;
 
-const tplTitle = document.getElementById('tplTitle') as HTMLInputElement;
-const tplContent = document.getElementById('tplContent') as HTMLTextAreaElement;
-const btnAddTemplate = document.getElementById('btnAddTemplate') as HTMLButtonElement;
-const templateList = document.getElementById('templateList') as HTMLElement;
-const btnExportTemplates = document.getElementById('btnExportTemplates') as HTMLButtonElement;
-const fileImportTemplates = document.getElementById('fileImportTemplates') as HTMLInputElement;
+  tplTitle: HTMLInputElement | null;
+  tplContent: HTMLTextAreaElement | null;
+  btnAddTemplate: HTMLButtonElement | null;
+  templateList: HTMLElement | null;
+  btnExportTemplates: HTMLButtonElement | null;
+  fileImportTemplates: HTMLInputElement | null;
+}
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await loadOptions();
-  await renderTemplates();
+function queryOptionElements(): OptionElements {
+  return {
+    apiKeyInput: document.getElementById('apiKey') as HTMLInputElement | null,
+    passphraseInput: document.getElementById('passphrase') as HTMLInputElement | null,
+    btnSaveApiKey: document.getElementById('btnSaveApiKey') as HTMLButtonElement | null,
+    btnRemoveApiKey: document.getElementById('btnRemoveApiKey') as HTMLButtonElement | null,
+    keyStatus: document.getElementById('keyStatus'),
 
-  btnSaveApiKey?.addEventListener('click', handleSaveApiKey);
-  btnRemoveApiKey?.addEventListener('click', handleRemoveApiKey);
-  btnSavePreferences?.addEventListener('click', handleSavePreferences);
-  btnAddTemplate?.addEventListener('click', handleAddTemplate);
-  btnExportTemplates?.addEventListener('click', handleExportTemplates);
-  fileImportTemplates?.addEventListener('change', handleImportTemplates);
-});
+    defaultModeSelect: document.getElementById('defaultMode') as HTMLSelectElement | null,
+    enableContextMenuCheckbox: document.getElementById('enableContextMenu') as HTMLInputElement | null,
+    btnSavePreferences: document.getElementById('btnSavePreferences') as HTMLButtonElement | null,
+    prefStatus: document.getElementById('prefStatus'),
 
-async function loadOptions(): Promise<void> {
+    tplTitle: document.getElementById('tplTitle') as HTMLInputElement | null,
+    tplContent: document.getElementById('tplContent') as HTMLTextAreaElement | null,
+    btnAddTemplate: document.getElementById('btnAddTemplate') as HTMLButtonElement | null,
+    templateList: document.getElementById('templateList'),
+    btnExportTemplates: document.getElementById('btnExportTemplates') as HTMLButtonElement | null,
+    fileImportTemplates: document.getElementById('fileImportTemplates') as HTMLInputElement | null,
+  };
+}
+
+function bootstrapOptions(): void {
+  const dom = queryOptionElements();
+  setupEventListeners(dom);
+
+  loadOptions(dom).catch((err) => console.error('[Options] Tải cấu hình lỗi:', err));
+  renderTemplates(dom).catch((err) => console.error('[Options] Render templates lỗi:', err));
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrapOptions);
+} else {
+  bootstrapOptions();
+}
+
+function setupEventListeners(dom: OptionElements): void {
+  dom.btnSaveApiKey?.addEventListener('click', () => handleSaveApiKey(dom));
+  dom.btnRemoveApiKey?.addEventListener('click', () => handleRemoveApiKey(dom));
+  dom.btnSavePreferences?.addEventListener('click', () => handleSavePreferences(dom));
+  dom.btnAddTemplate?.addEventListener('click', () => handleAddTemplate(dom));
+  dom.btnExportTemplates?.addEventListener('click', () => handleExportTemplates());
+  dom.fileImportTemplates?.addEventListener('change', (e) => handleImportTemplates(dom, e));
+}
+
+async function loadOptions(dom: OptionElements): Promise<void> {
   const settings = await SettingsRepository.getSettings();
   const hasKey = await VaultRepository.hasApiKey();
 
-  if (hasKey && keyStatus) {
-    showStatus(keyStatus, 'Đã cấu hình API Key (được mã hoá an toàn với Web Crypto).', 'success');
+  if (hasKey && dom.keyStatus) {
+    showStatus(dom.keyStatus, 'Đã cấu hình API Key (được mã hoá an toàn với Web Crypto).', 'success');
   }
 
-  if (settings.defaultMode && defaultModeSelect) {
-    defaultModeSelect.value = settings.defaultMode;
+  if (settings.defaultMode && dom.defaultModeSelect) {
+    dom.defaultModeSelect.value = settings.defaultMode;
   }
 
-  if (typeof settings.enableContextMenu !== 'undefined' && enableContextMenuCheckbox) {
-    enableContextMenuCheckbox.checked = settings.enableContextMenu;
+  if (typeof settings.enableContextMenu !== 'undefined' && dom.enableContextMenuCheckbox) {
+    dom.enableContextMenuCheckbox.checked = settings.enableContextMenu;
   }
 }
 
-async function handleSaveApiKey(): Promise<void> {
-  const key = apiKeyInput?.value.trim();
-  const passphrase = passphraseInput?.value.trim();
+async function handleSaveApiKey(dom: OptionElements): Promise<void> {
+  const key = dom.apiKeyInput?.value.trim();
+  const passphrase = dom.passphraseInput?.value.trim();
 
   if (!key || !passphrase) {
-    showStatus(keyStatus, 'Vui lòng nhập cả API Key và Mật khẩu bảo vệ!', 'error');
+    showStatus(dom.keyStatus, 'Vui lòng nhập cả API Key và Mật khẩu bảo vệ!', 'error');
     return;
   }
 
   if (passphrase.length < 6) {
-    showStatus(keyStatus, 'Mật khẩu bảo vệ nên có ít nhất 6 ký tự!', 'error');
+    showStatus(dom.keyStatus, 'Mật khẩu bảo vệ nên có ít nhất 6 ký tự!', 'error');
     return;
   }
 
   try {
     await VaultRepository.saveApiKey(key, passphrase);
-    if (apiKeyInput) apiKeyInput.value = '';
-    if (passphraseInput) passphraseInput.value = '';
-    showStatus(keyStatus, 'Đã mã hóa và lưu API Key an toàn!', 'success');
+    if (dom.apiKeyInput) dom.apiKeyInput.value = '';
+    if (dom.passphraseInput) dom.passphraseInput.value = '';
+    showStatus(dom.keyStatus, 'Đã mã hóa và lưu API Key an toàn!', 'success');
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    showStatus(keyStatus, `Lỗi mã hóa: ${msg}`, 'error');
+    showStatus(dom.keyStatus, `Lỗi mã hóa: ${msg}`, 'error');
   }
 }
 
-async function handleRemoveApiKey(): Promise<void> {
+async function handleRemoveApiKey(dom: OptionElements): Promise<void> {
   if (confirm('Bạn có chắc chắn muốn xóa API Key đã lưu?')) {
     await VaultRepository.removeApiKey();
-    showStatus(keyStatus, 'Đã xóa API Key khỏi bộ nhớ local.', 'success');
+    showStatus(dom.keyStatus, 'Đã xóa API Key khỏi bộ nhớ local.', 'success');
   }
 }
 
-async function handleSavePreferences(): Promise<void> {
-  const defaultMode = defaultModeSelect?.value || 'concise';
-  const enableContextMenu = enableContextMenuCheckbox ? enableContextMenuCheckbox.checked : true;
+async function handleSavePreferences(dom: OptionElements): Promise<void> {
+  const defaultMode = dom.defaultModeSelect?.value || 'concise';
+  const enableContextMenu = dom.enableContextMenuCheckbox ? dom.enableContextMenuCheckbox.checked : true;
 
   await SettingsRepository.updateSettings({ defaultMode, enableContextMenu });
-  showStatus(prefStatus, 'Đã lưu cấu hình tùy chọn thành công!', 'success');
+  showStatus(dom.prefStatus, 'Đã lưu cấu hình tùy chọn thành công!', 'success');
 }
 
-async function handleAddTemplate(): Promise<void> {
-  const title = tplTitle?.value.trim();
-  const template = tplContent?.value.trim();
+async function handleAddTemplate(dom: OptionElements): Promise<void> {
+  const title = dom.tplTitle?.value.trim();
+  const template = dom.tplContent?.value.trim();
 
   if (!title || !template) {
     alert('Vui lòng nhập đầy đủ tiêu đề và nội dung template.');
@@ -109,13 +144,14 @@ async function handleAddTemplate(): Promise<void> {
   list.push({ id: Date.now().toString(), title, template });
 
   await SettingsRepository.updateSettings({ customTemplates: list });
-  if (tplTitle) tplTitle.value = '';
-  if (tplContent) tplContent.value = '';
-  await renderTemplates();
+  if (dom.tplTitle) dom.tplTitle.value = '';
+  if (dom.tplContent) dom.tplContent.value = '';
+  await renderTemplates(dom);
 }
 
-async function renderTemplates(): Promise<void> {
-  if (!templateList) return;
+async function renderTemplates(dom: OptionElements): Promise<void> {
+  const listEl = dom.templateList;
+  if (!listEl) return;
   const settings = await SettingsRepository.getSettings();
   const list: CustomTemplate[] = settings.customTemplates || [
     {
@@ -132,7 +168,7 @@ async function renderTemplates(): Promise<void> {
     },
   ];
 
-  templateList.innerHTML = '';
+  listEl.innerHTML = '';
   list.forEach((item) => {
     const div = document.createElement('div');
     div.className = 'template-item';
@@ -144,10 +180,10 @@ async function renderTemplates(): Promise<void> {
     div.querySelector('.btn-del')?.addEventListener('click', async () => {
       const updated = list.filter((t) => t.id !== item.id);
       await SettingsRepository.updateSettings({ customTemplates: updated });
-      await renderTemplates();
+      await renderTemplates(dom);
     });
 
-    templateList.appendChild(div);
+    listEl.appendChild(div);
   });
 }
 
@@ -164,7 +200,7 @@ async function handleExportTemplates(): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-function handleImportTemplates(e: Event): void {
+function handleImportTemplates(dom: OptionElements, e: Event): void {
   const target = e.target as HTMLInputElement;
   const file = target.files?.[0];
   if (!file) return;
@@ -176,7 +212,7 @@ function handleImportTemplates(e: Event): void {
       const imported = JSON.parse(text);
       if (Array.isArray(imported)) {
         await SettingsRepository.updateSettings({ customTemplates: imported });
-        await renderTemplates();
+        await renderTemplates(dom);
         alert('Đã nhập danh sách templates thành công!');
       } else {
         alert('File JSON không đúng định dạng mảng templates!');
@@ -189,7 +225,7 @@ function handleImportTemplates(e: Event): void {
   reader.readAsText(file);
 }
 
-function showStatus(elem: HTMLElement, text: string, type: 'success' | 'error'): void {
+function showStatus(elem: HTMLElement | null, text: string, type: 'success' | 'error'): void {
   if (!elem) return;
   const icon =
     type === 'success'
