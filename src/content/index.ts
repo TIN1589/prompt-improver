@@ -17,25 +17,8 @@ async function bootstrap(): Promise<void> {
 
   const hostname = window.location.hostname;
 
-  // 1. Kiểm tra site có được bật trong cài đặt không
-  try {
-    const res = await MessageClient.send<CheckSiteResult>({
-      type: 'SITE:CHECK_ENABLED',
-      payload: { hostname },
-    });
-
-    if (res && res.enabled === false) {
-      console.log('[Prompt Improver] Extension đã bị tắt trên trang:', hostname);
-      return;
-    }
-  } catch (_) {
-    // Nếu chưa khởi động xong service worker, tiếp tục chạy bình thường
-  }
-
-  // 2. Tìm Platform Adapter tương thích
+  // 1. Khởi tạo Platform Adapter và DOM Observer ngay lập tức (không chặn)
   const adapter = resolvePlatformAdapter(hostname);
-
-  // 3. Khởi tạo Observer theo dõi DOM
   const observer = new DOMObserver({
     adapter,
     onButtonClick: (inputEl) => {
@@ -55,6 +38,23 @@ async function bootstrap(): Promise<void> {
   });
 
   observer.start();
+
+  // 2. Kiểm tra cài đặt bất đồng bộ trong nền — nếu người dùng tắt domain này thì dừng
+  MessageClient.send<CheckSiteResult>({
+    type: 'SITE:CHECK_ENABLED',
+    payload: { hostname },
+  })
+    .then((res) => {
+      if (res && res.enabled === false) {
+        observer.stop();
+        const btn = document.getElementById('pi-btn-host');
+        if (btn) btn.remove();
+        console.log('[Prompt Improver] Extension đã bị tắt trên trang:', hostname);
+      }
+    })
+    .catch(() => {
+      // Background chưa sẵn sàng, giữ nguyên trạng thái chạy
+    });
 
   // 4. Lắng nghe Context Menu kích hoạt từ Background
   chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {

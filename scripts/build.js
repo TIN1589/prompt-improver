@@ -37,6 +37,7 @@ async function runBuild() {
   console.log('📦 [1/3] Đang đóng gói giao diện UI (Popup & Options)...');
   await build({
     root: ROOT,
+    base: './',
     configFile: false,
     resolve: {
       alias: {
@@ -55,6 +56,21 @@ async function runBuild() {
       },
     },
   });
+
+  // Tạo thêm popup.html và options.html trực tiếp tại dist/ để hỗ trợ relative path sạch sẽ
+  const popupHtmlSrc = resolve(DIST, 'src/ui/popup/index.html');
+  if (existsSync(popupHtmlSrc)) {
+    let html = readFileSync(popupHtmlSrc, 'utf-8');
+    html = html.replaceAll('../../../', './');
+    writeFileSync(resolve(DIST, 'popup.html'), html, 'utf-8');
+  }
+
+  const optionsHtmlSrc = resolve(DIST, 'src/ui/options/index.html');
+  if (existsSync(optionsHtmlSrc)) {
+    let html = readFileSync(optionsHtmlSrc, 'utf-8');
+    html = html.replaceAll('../../../', './');
+    writeFileSync(resolve(DIST, 'options.html'), html, 'utf-8');
+  }
 
   // 3. Build Background Service Worker (ESM format)
   console.log('⚡ [2/3] Đang đóng gói Background Service Worker (ESM)...');
@@ -116,7 +132,7 @@ async function runBuild() {
   // 5. Copy Static Assets & Manifest
   console.log('📋 Đang đồng bộ Manifest V3, Content CSS và Assets...');
 
-  // Copy assets folder
+  // Copy assets folder to dist
   if (existsSync(resolve(ROOT, 'assets'))) {
     cpSync(resolve(ROOT, 'assets'), resolve(DIST, 'assets'), { recursive: true });
   }
@@ -138,7 +154,7 @@ async function runBuild() {
 
   manifest.content_scripts = [
     {
-      matches: manifest.content_scripts[0]?.matches || ['<all_urls>'],
+      matches: manifest.content_scripts?.[0]?.matches || ['<all_urls>'],
       js: ['content.js'],
       run_at: 'document_idle',
       all_frames: false,
@@ -146,7 +162,7 @@ async function runBuild() {
   ];
 
   manifest.action = {
-    default_popup: 'src/ui/popup/index.html',
+    default_popup: 'popup.html',
     default_title: 'Prompt Improver — AI Optimizer',
     default_icon: manifest.action?.default_icon || {
       '16': 'assets/icon16.png',
@@ -156,7 +172,7 @@ async function runBuild() {
   };
 
   manifest.options_ui = {
-    page: 'src/ui/options/index.html',
+    page: 'options.html',
     open_in_tab: true,
   };
 

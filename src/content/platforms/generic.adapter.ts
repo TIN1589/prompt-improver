@@ -40,8 +40,8 @@ export class GenericAdapter implements PlatformAdapter {
     return null;
   }
 
-  findToolbarAnchor(inputEl: HTMLElement): HTMLElement | null {
-    return inputEl.closest('form') || inputEl.parentElement;
+  findToolbarAnchor(_inputEl: HTMLElement): HTMLElement | null {
+    return null; // Để DOMObserver sử dụng chiến lược 4 tầng thông minh
   }
 
   extractText(inputEl: HTMLElement): string {

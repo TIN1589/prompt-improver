@@ -23,7 +23,7 @@
     "<all_urls>"
   ],
   "action": {
-    "default_popup": "dist/src/ui/popup/index.html",
+    "default_popup": "dist/popup.html",
     "default_title": "Prompt Improver — AI Optimizer",
     "default_icon": {
       "16": "assets/icon16.png",
@@ -63,6 +63,7 @@
     {
       "resources": [
         "src/content.css",
+        "dist/src/content.css",
         "assets/fonts/SpaceGrotesk-Regular.woff2",
         "assets/fonts/SpaceGrotesk-SemiBold.woff2",
         "assets/fonts/SpaceGrotesk-Bold.woff2",
@@ -78,7 +79,7 @@
     }
   ],
   "options_ui": {
-    "page": "dist/src/ui/options/index.html",
+    "page": "dist/options.html",
     "open_in_tab": true
   }
 }

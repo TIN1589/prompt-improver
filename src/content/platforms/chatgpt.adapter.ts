@@ -18,8 +18,11 @@ export class ChatGPTAdapter implements PlatformAdapter {
     '#prompt-textarea',
     'div#prompt-textarea',
     'textarea#prompt-textarea',
+    'div[contenteditable="true"][data-placeholder]',
     'div[contenteditable="true"]',
     'div[role="textbox"]',
+    'textarea[placeholder*="message" i]',
+    'textarea[placeholder*="chat" i]',
     'textarea',
   ];
 
@@ -36,9 +39,9 @@ export class ChatGPTAdapter implements PlatformAdapter {
   }
 
   findToolbarAnchor(inputEl: HTMLElement): HTMLElement | null {
-    // 1. Tìm nút đính kèm (+)
+    // 1. Tìm nút đính kèm (+) hoặc Add content
     const attachBtn = document.querySelector<HTMLElement>(
-      'button[aria-label*="attach" i], button[data-testid*="attachment" i], button[aria-label*="Upload" i]'
+      'button[data-testid="composer-plus-button"], button[data-testid="attachment-button"], button[aria-label*="Add" i], button[aria-label*="attach" i], button[aria-label*="Upload" i], button[aria-label*="Đính kèm" i]'
     );
     if (attachBtn && isElementVisible(attachBtn)) {
       const group = attachBtn.closest('div.flex') || attachBtn.parentElement;
@@ -47,16 +50,16 @@ export class ChatGPTAdapter implements PlatformAdapter {
       }
     }
 
-    // 2. Tìm nút gửi
+    // 2. Tìm nút gửi (khi có văn bản)
     const sendBtn = document.querySelector<HTMLElement>(
-      'button[data-testid="send-button"], button[aria-label*="Send" i]'
+      'button[data-testid="send-button"], button[data-testid="composer-send-button"], button[aria-label*="Send" i]'
     );
     if (sendBtn && isElementVisible(sendBtn)) {
       return (sendBtn.closest('div.flex') || sendBtn.parentElement) as HTMLElement;
     }
 
-    // 3. Fallback
-    return inputEl.closest('form') || inputEl.parentElement;
+    // 3. Để DOMObserver xử lý các Tier dự phòng tiếp theo
+    return null;
   }
 
   extractText(inputEl: HTMLElement): string {

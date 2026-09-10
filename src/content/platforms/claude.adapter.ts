@@ -18,7 +18,10 @@ export class ClaudeAdapter implements PlatformAdapter {
     'div[contenteditable="true"][data-testid="chat-input"]',
     'div[contenteditable="true"].ProseMirror',
     'div.tiptap.ProseMirror',
+    'div[contenteditable="true"][role="textbox"]',
     'div[contenteditable="true"]',
+    'textarea[placeholder*="message" i]',
+    'textarea',
   ];
 
   matches(hostname: string): boolean {
@@ -36,7 +39,7 @@ export class ClaudeAdapter implements PlatformAdapter {
   findToolbarAnchor(inputEl: HTMLElement): HTMLElement | null {
     // 1. Tìm nút Attach / Upload
     const attachBtn = document.querySelector<HTMLElement>(
-      'button[aria-label*="attach" i], button[aria-label*="Upload" i], button[aria-label*="File" i]'
+      'button[data-testid="chat-input-attach"], button[aria-label*="attach" i], button[aria-label*="Upload" i], button[aria-label*="File" i]'
     );
     if (attachBtn && isElementVisible(attachBtn)) {
       const group =
@@ -48,8 +51,7 @@ export class ClaudeAdapter implements PlatformAdapter {
       }
     }
 
-    // 2. Fallback sang Composer Wrapper
-    return inputEl.closest('fieldset') || inputEl.closest('form') || inputEl.parentElement;
+    return null;
   }
 
   extractText(inputEl: HTMLElement): string {
