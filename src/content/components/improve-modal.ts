@@ -82,7 +82,7 @@ export async function openImproveModal(
       <div class="pi-skeleton-box">
         <div class="pi-spinner"></div>
         <div class="pi-loading-text">Đang tối ưu hóa prompt với Gemini...</div>
-        <div class="pi-loading-subtext">Đang phân tích bối cảnh, tính điểm chất lượng và tạo 2 phiên bản</div>
+        <div class="pi-loading-subtext">Đang kết nối AI, phân tích bối cảnh và tạo 2 phiên bản (khoảng 5-15 giây)</div>
       </div>
     </div>
   `;

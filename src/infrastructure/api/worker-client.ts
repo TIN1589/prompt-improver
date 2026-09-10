@@ -31,8 +31,8 @@ export class WorkerClient {
   static async improvePrompt(
     backendUrl: string,
     body: ImproveRequestBody,
-    maxRetries: number = 2,
-    timeoutMs: number = 12000
+    maxRetries: number = 1,
+    timeoutMs: number = 35000
   ): Promise<ImproveResponseBody> {
     const rawUrl = normalizeBackendUrl(backendUrl);
     if (!rawUrl || isPlaceholderUrl(rawUrl)) {
@@ -67,19 +67,13 @@ export class WorkerClient {
             errJson.retryAfterSeconds ||
             (retryAfterHeader ? parseInt(retryAfterHeader, 10) : 15);
 
-          const rateLimitError = new ApiRateLimitError(
+          // Backend đã tự động fallback qua toàn bộ các model Gemini. Nếu vẫn 429 thì ném lỗi ngay để UI hiển thị thông báo.
+          throw new ApiRateLimitError(
             errJson.message ||
               `Quá giới hạn lượt gọi API Gemini (Rate limit 429). Vui lòng thử lại sau ~${retrySeconds}s.`,
             retrySeconds,
             errJson
           );
-
-          if (attempt < maxRetries - 1) {
-            const backoff = Math.min(Math.max(retrySeconds * 1000, 2000), 5000);
-            await delay(backoff);
-            continue;
-          }
-          throw rateLimitError;
         }
 
         if (res.status === 502 || res.status === 503 || res.status === 504) {

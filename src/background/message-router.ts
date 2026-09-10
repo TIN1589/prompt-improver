@@ -40,7 +40,7 @@ export class MessageRouter {
 
     chrome.runtime.onMessage.addListener(
       (message: ExtensionMessage, _sender, sendResponse: (response: MessageResponse<unknown>) => void) => {
-        const ROUTER_TIMEOUT_MS = 20000; // Trần 20s an toàn, đảm bảo gọi sendResponse trước khi SW bị kill
+        const ROUTER_TIMEOUT_MS = 40000; // Trần 40s an toàn, đảm bảo gọi sendResponse trước khi client timeout
 
         let isSettled = false;
         const timer = setTimeout(() => {
@@ -50,7 +50,7 @@ export class MessageRouter {
               success: false,
               error: {
                 code: 'SW_TIMEOUT',
-                message: 'Quá thời gian chờ xử lý yêu cầu (Timeout sau 20s). Máy chủ Backend không phản hồi kịp thời.',
+                message: 'Quá thời gian chờ xử lý yêu cầu (Timeout sau 40s). Máy chủ AI không phản hồi kịp thời.',
                 isRateLimit: false,
                 retryAfterSeconds: 15,
               },

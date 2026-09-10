@@ -11,10 +11,10 @@
 // ─── CẤU HÌNH GEMINI MODELS CHÍNH THỨC ───────────────────────────────────────
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GEMINI_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
-  'gemini-1.5-flash',
   'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-2.0-flash-lite',
 ];
 
 // ─── CORS HEADERS ───────────────────────────────────────────────────────────
@@ -175,12 +175,17 @@ async function callGemini(promptText, taskType, persona, apiKey) {
       },
     };
 
+    const controller = new AbortController();
+    const modelTimer = setTimeout(() => controller.abort(), 12000);
+
     try {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
+        signal: controller.signal,
       });
+      clearTimeout(modelTimer);
 
       if (!res.ok) {
         const errText = await res.text();
@@ -214,6 +219,7 @@ async function callGemini(promptText, taskType, persona, apiKey) {
         modelUsed: model,
       };
     } catch (err) {
+      clearTimeout(modelTimer);
       if (err.message?.includes('Lỗi Xác thực Gemini')) {
         throw err;
       }
