@@ -5,7 +5,7 @@
 import { ApiRateLimitError, NetworkUnavailableError, BackendConfigurationMissingError } from '../../shared/errors/extension-error';
 import type { TaskType } from '../../core/models/task-type.entity';
 import type { PersonaId } from '../../core/models/persona.entity';
-import { normalizeBackendUrl } from '../../shared/utils/url';
+import { normalizeBackendUrl, isPlaceholderUrl } from '../../shared/utils/url';
 
 export interface ImproveRequestBody {
   prompt: string;
@@ -31,12 +31,14 @@ export class WorkerClient {
   static async improvePrompt(
     backendUrl: string,
     body: ImproveRequestBody,
-    maxRetries: number = 3,
-    timeoutMs: number = 30000
+    maxRetries: number = 2,
+    timeoutMs: number = 12000
   ): Promise<ImproveResponseBody> {
     const rawUrl = normalizeBackendUrl(backendUrl);
-    if (!rawUrl) {
-      throw new BackendConfigurationMissingError();
+    if (!rawUrl || isPlaceholderUrl(rawUrl)) {
+      throw new BackendConfigurationMissingError(
+        'Chưa cấu hình Backend URL hoặc URL đang chứa mẫu placeholder (xxx.workers.dev). Vui lòng cấu hình URL Cloudflare Worker hợp lệ tại tab Cấu hình.'
+      );
     }
 
     const endpoint = rawUrl.endsWith('/improve') ? rawUrl : `${rawUrl}/improve`;
@@ -107,20 +109,34 @@ export class WorkerClient {
           throw err;
         }
 
-        const message = err instanceof Error ? err.message : String(err);
-        if (
-          message.includes('GEMINI_API_KEY') ||
-          message.includes('MISSING_API_KEY') ||
-          message.includes('API key not valid') ||
-          message.includes('UNAUTHORIZED_ACCESS')
-        ) {
-          throw err;
+        const isAborted =
+          (err instanceof Error && (err.name === 'AbortError' || err.message.includes('aborted'))) ||
+          controller.signal.aborted;
+
+        let friendlyMessage = err instanceof Error ? err.message : String(err);
+        if (isAborted) {
+          friendlyMessage = `Quá thời gian chờ phản hồi từ máy chủ (Timeout sau ${Math.round(timeoutMs / 1000)}s). Máy chủ có thể đang khởi động nguội (cold start) hoặc chưa phản hồi.`;
+        } else if (friendlyMessage.includes('Failed to fetch') || friendlyMessage.includes('NetworkError')) {
+          friendlyMessage = `Không thể kết nối đến máy chủ Cloudflare Worker (${rawUrl}). Vui lòng kiểm tra lại URL Worker hoặc kết nối mạng.`;
         }
 
-        lastError = err instanceof Error ? err : new Error(message);
+        if (
+          friendlyMessage.includes('GEMINI_API_KEY') ||
+          friendlyMessage.includes('MISSING_API_KEY') ||
+          friendlyMessage.includes('API key not valid') ||
+          friendlyMessage.includes('UNAUTHORIZED_ACCESS')
+        ) {
+          throw err instanceof Error ? err : new Error(friendlyMessage);
+        }
+
+        lastError = isAborted
+          ? new NetworkUnavailableError(friendlyMessage)
+          : err instanceof Error
+          ? new NetworkUnavailableError(friendlyMessage, err)
+          : new NetworkUnavailableError(friendlyMessage);
 
         if (attempt < maxRetries - 1) {
-          const backoff = Math.min(1000 * Math.pow(2, attempt), 6000);
+          const backoff = isAborted ? 1000 : Math.min(1000 * Math.pow(2, attempt), 2000);
           await delay(backoff);
         }
       }
@@ -128,7 +144,7 @@ export class WorkerClient {
 
     throw (
       lastError ||
-      new NetworkUnavailableError('Không thể kết nối đến Backend sau nhiều lần thử lại.')
+      new NetworkUnavailableError('Không thể kết nối đến máy chủ Cloudflare Worker sau nhiều lần thử lại.')
     );
   }
 }

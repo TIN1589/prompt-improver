@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { normalizeBackendUrl } from '../../src/shared/utils/url';
+import { normalizeBackendUrl, isPlaceholderUrl } from '../../src/shared/utils/url';
 
 describe('normalizeBackendUrl', () => {
   it('Xử lý chuỗi rỗng và khoảng trắng', () => {
@@ -27,4 +27,12 @@ describe('normalizeBackendUrl', () => {
     expect(normalizeBackendUrl('https://my-worker.workers.dev///')).toBe('https://my-worker.workers.dev');
     expect(normalizeBackendUrl('my-worker.workers.dev/')).toBe('https://my-worker.workers.dev');
   });
+
+  it('Nhận diện chính xác URL mẫu (placeholder) xxx.workers.dev', () => {
+    expect(isPlaceholderUrl('https://prompt-improver.xxx.workers.dev')).toBe(true);
+    expect(isPlaceholderUrl('prompt-improver.xxx.workers.dev')).toBe(true);
+    expect(isPlaceholderUrl('https://prompt-improver.real-subdomain.workers.dev')).toBe(false);
+    expect(isPlaceholderUrl('')).toBe(false);
+  });
 });
+

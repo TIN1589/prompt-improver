@@ -16,10 +16,13 @@ import {
   ExtensionError,
   ApiRateLimitError,
   InvalidInputError,
+  ServiceWorkerTimeoutError,
+  BackendConfigurationMissingError,
 } from '../shared/errors/extension-error';
 import { ClassifyTaskUseCase } from '../core/use-cases/classify-task.use-case';
 import { ScorePromptUseCase } from '../core/use-cases/score-prompt.use-case';
 import { hashPrompt } from '../shared/utils/crypto';
+import { isPlaceholderUrl } from '../shared/utils/url';
 import { SettingsRepository } from '../infrastructure/storage/settings.repository';
 import { CacheRepository } from '../infrastructure/storage/cache.repository';
 import { HistoryRepository } from '../infrastructure/storage/history.repository';
@@ -37,11 +40,36 @@ export class MessageRouter {
 
     chrome.runtime.onMessage.addListener(
       (message: ExtensionMessage, _sender, sendResponse: (response: MessageResponse<unknown>) => void) => {
+        const ROUTER_TIMEOUT_MS = 20000; // Trần 20s an toàn, đảm bảo gọi sendResponse trước khi SW bị kill
+
+        let isSettled = false;
+        const timer = setTimeout(() => {
+          if (!isSettled) {
+            isSettled = true;
+            sendResponse({
+              success: false,
+              error: {
+                code: 'SW_TIMEOUT',
+                message: 'Quá thời gian chờ xử lý yêu cầu (Timeout sau 20s). Máy chủ Backend không phản hồi kịp thời.',
+                isRateLimit: false,
+                retryAfterSeconds: 15,
+              },
+            });
+          }
+        }, ROUTER_TIMEOUT_MS);
+
         this.route(message)
           .then((data) => {
+            if (isSettled) return;
+            isSettled = true;
+            clearTimeout(timer);
             sendResponse({ success: true, data });
           })
           .catch((err: unknown) => {
+            if (isSettled) return;
+            isSettled = true;
+            clearTimeout(timer);
+
             const isRateLimit =
               err instanceof ApiRateLimitError ||
               (err instanceof Error &&
@@ -165,7 +193,14 @@ export class MessageRouter {
     }
 
     // 3. Gọi Cloudflare Worker Backend
-    const responseData = await WorkerClient.improvePrompt(settings.backendUrl, {
+    const backendUrl = settings.backendUrl?.trim() || '';
+    if (!backendUrl || isPlaceholderUrl(backendUrl)) {
+      throw new BackendConfigurationMissingError(
+        'Chưa cấu hình Backend URL hoặc URL đang chứa mẫu placeholder (xxx.workers.dev). Vui lòng cấu hình URL Cloudflare Worker hợp lệ tại tab Cấu hình.'
+      );
+    }
+
+    const responseData = await WorkerClient.improvePrompt(backendUrl, {
       prompt: cleanPrompt,
       taskType,
       persona,

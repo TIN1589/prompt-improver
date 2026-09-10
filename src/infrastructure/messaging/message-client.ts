@@ -10,7 +10,7 @@ export class MessageClient {
   /**
    * Gửi message tới Extension Runtime (Background) và nhận kết quả type-safe
    */
-  static async send<T = unknown>(message: ExtensionMessage, timeoutMs: number = 35000): Promise<T> {
+  static async send<T = unknown>(message: ExtensionMessage, timeoutMs: number = 25000): Promise<T> {
     if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
       throw new Error('Chrome runtime không khả dụng trong môi trường hiện tại.');
     }
@@ -20,7 +20,11 @@ export class MessageClient {
       const timer = setTimeout(() => {
         if (!isSettled) {
           isSettled = true;
-          reject(new Error('Extension runtime không phản hồi (Message Timeout).'));
+          reject(
+            new Error(
+              'Extension runtime hoặc máy chủ không phản hồi kịp thời (Timeout sau 25s). Vui lòng kiểm tra lại URL Cloudflare Worker tại tab Cấu hình.'
+            )
+          );
         }
       }, timeoutMs);
 

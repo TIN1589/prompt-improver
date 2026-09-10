@@ -21,3 +21,10 @@ export function normalizeBackendUrl(rawUrl: string): string {
   }
   return url;
 }
+
+/**
+ * Kiểm tra xem URL có phải là URL mẫu (placeholder) chưa thay subdomain hay không
+ */
+export function isPlaceholderUrl(url: string): boolean {
+  return /xxx\.workers\.dev/i.test(url || '');
+}

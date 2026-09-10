@@ -8,7 +8,7 @@ import { MessageClient } from '../../infrastructure/messaging/message-client';
 import { SettingsRepository } from '../../infrastructure/storage/settings.repository';
 import { HistoryRepository } from '../../infrastructure/storage/history.repository';
 import { PingClient } from '../../infrastructure/api/ping-client';
-import { normalizeBackendUrl } from '../../shared/utils/url';
+import { normalizeBackendUrl, isPlaceholderUrl } from '../../shared/utils/url';
 import type {
   VersionResult,
   PingResult,
@@ -203,6 +203,15 @@ function renderSiteToggles(dom: PopupElements, siteSettings: SiteSettings): void
 
 async function handleSaveSettings(dom: PopupElements): Promise<void> {
   const rawUrl = dom.inputBackendUrl?.value.trim() || '';
+  if (isPlaceholderUrl(rawUrl)) {
+    showPingResult(
+      dom,
+      'URL đang chứa "xxx.workers.dev". Vui lòng thay bằng subdomain Worker thực tế của bạn trước khi lưu!',
+      false
+    );
+    return;
+  }
+
   const backendUrl = normalizeBackendUrl(rawUrl);
   if (dom.inputBackendUrl && rawUrl && dom.inputBackendUrl.value !== backendUrl) {
     dom.inputBackendUrl.value = backendUrl;
@@ -243,6 +252,15 @@ async function handlePingBackend(dom: PopupElements): Promise<void> {
   const rawUrl = dom.inputBackendUrl?.value.trim() || '';
   if (!rawUrl) {
     showPingResult(dom, 'Vui lòng nhập Backend URL!', false);
+    return;
+  }
+
+  if (isPlaceholderUrl(rawUrl)) {
+    showPingResult(
+      dom,
+      'URL đang chứa "xxx.workers.dev". Vui lòng thay bằng subdomain Worker thực tế của bạn!',
+      false
+    );
     return;
   }
 
@@ -326,6 +344,18 @@ async function handleRunQuickTest(dom: PopupElements): Promise<void> {
   const prompt = dom.testPromptInput?.value.trim();
   if (!prompt) {
     showTestAlert(dom, 'Vui lòng nhập prompt mẫu!', 'error');
+    return;
+  }
+
+  // Kiểm tra trước URL Backend trong cấu hình
+  const settings = await SettingsRepository.getSettings();
+  const backendUrl = settings.backendUrl?.trim() || '';
+  if (!backendUrl || isPlaceholderUrl(backendUrl)) {
+    showTestAlert(
+      dom,
+      'Chưa cấu hình URL Cloudflare Worker hợp lệ! Vui lòng chuyển sang tab "Cấu hình" để nhập URL Worker của bạn.',
+      'error'
+    );
     return;
   }
 
