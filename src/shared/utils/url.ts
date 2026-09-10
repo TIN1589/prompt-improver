@@ -1,4 +1,4 @@
-﻿/**
+/**
  * url.ts — URL Normalization & Validation Utilities
  */
 
@@ -13,7 +13,11 @@ export function normalizeBackendUrl(rawUrl: string): string {
   if (!url) return '';
 
   if (!/^https?:\/\//i.test(url)) {
-    url = 'https://' + url;
+    if (/^(localhost|127\.0\.0\.1)(:\d+)?/i.test(url)) {
+      url = 'http://' + url;
+    } else {
+      url = 'https://' + url;
+    }
   }
   return url;
 }

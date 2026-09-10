@@ -77,6 +77,7 @@ export interface PingResult {
   latencyMs: number;
   hasApiKey: boolean;
   info: string;
+  error?: string;
 }
 
 export interface CacheStatsResult {

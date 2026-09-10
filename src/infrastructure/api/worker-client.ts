@@ -31,7 +31,8 @@ export class WorkerClient {
   static async improvePrompt(
     backendUrl: string,
     body: ImproveRequestBody,
-    maxRetries: number = 3
+    maxRetries: number = 3,
+    timeoutMs: number = 30000
   ): Promise<ImproveResponseBody> {
     const rawUrl = normalizeBackendUrl(backendUrl);
     if (!rawUrl) {
@@ -42,12 +43,17 @@ export class WorkerClient {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
       try {
         const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
+          signal: controller.signal,
         });
+        clearTimeout(timer);
 
         if (res.status === 429) {
           const errJson = (await res.json().catch(() => ({}))) as {
@@ -96,6 +102,7 @@ export class WorkerClient {
         const data = (await res.json()) as ImproveResponseBody;
         return data;
       } catch (err: unknown) {
+        clearTimeout(timer);
         if (err instanceof ApiRateLimitError) {
           throw err;
         }

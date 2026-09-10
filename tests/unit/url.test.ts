@@ -1,4 +1,4 @@
-﻿/**
+/**
  * url.test.ts — Unit tests for normalizeBackendUrl
  */
 
@@ -11,9 +11,10 @@ describe('normalizeBackendUrl', () => {
     expect(normalizeBackendUrl('   ')).toBe('');
   });
 
-  it('Tự động thêm tiền tố https:// khi thiếu giao thức', () => {
+  it('Tự động thêm tiền tố https:// khi thiếu giao thức (và http:// cho localhost)', () => {
     expect(normalizeBackendUrl('prompt-improver.xxx.workers.dev')).toBe('https://prompt-improver.xxx.workers.dev');
-    expect(normalizeBackendUrl('localhost:8787')).toBe('https://localhost:8787');
+    expect(normalizeBackendUrl('localhost:8787')).toBe('http://localhost:8787');
+    expect(normalizeBackendUrl('127.0.0.1:8787')).toBe('http://127.0.0.1:8787');
   });
 
   it('Giữ nguyên giao thức nếu đã có http:// hoặc https://', () => {

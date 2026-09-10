@@ -7,6 +7,7 @@ import { iconSvg } from '../../shared/utils/svg-icons';
 import { MessageClient } from '../../infrastructure/messaging/message-client';
 import { SettingsRepository } from '../../infrastructure/storage/settings.repository';
 import { HistoryRepository } from '../../infrastructure/storage/history.repository';
+import { PingClient } from '../../infrastructure/api/ping-client';
 import { normalizeBackendUrl } from '../../shared/utils/url';
 import type {
   VersionResult,
@@ -257,17 +258,14 @@ async function handlePingBackend(dom: PopupElements): Promise<void> {
   }
 
   try {
-    const res = await MessageClient.send<PingResult>({
-      type: 'BACKEND:PING',
-      payload: { url },
-    });
+    const res = await PingClient.ping(url, 6000);
 
     if (res.online) {
       setServerBadge(dom, 'online', `Online (${res.latencyMs}ms)`);
       showPingResult(dom, `Kết nối thành công! Độ trễ: ${res.latencyMs}ms.`, true);
     } else {
       setServerBadge(dom, 'offline', 'Offline');
-      showPingResult(dom, 'Không thể kết nối đến máy chủ.', false);
+      showPingResult(dom, res.error || 'Không thể kết nối đến máy chủ.', false);
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
