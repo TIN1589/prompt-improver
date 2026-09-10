@@ -7,9 +7,9 @@
     "build": "node scripts/build.js",
     "dev": "node scripts/build.js",
     "type-check": "tsc --noEmit",
-    "test:legacy": "node test/test_optimizer.js && node test/test_scoring_engine.js && node test/test_semantic_expander.js && node test/test_backend_mock.js && node test/syntax_check.js",
     "test:unit": "vitest run",
-    "test": "npm run type-check && npm run test:legacy && npm run test:unit",
+    "test:legacy": "node legacy/test/test_optimizer.js && node legacy/test/test_scoring_engine.js && node legacy/test/test_semantic_expander.js && node legacy/test/test_backend_mock.js && node legacy/test/syntax_check.js",
+    "test": "npm run type-check && npm run test:unit",
     "icons": "node generate_icons.js"
   },
   "keywords": [
