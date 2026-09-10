@@ -11,10 +11,18 @@ export class AlarmsHandler {
   static setup(): void {
     if (typeof chrome === 'undefined' || !chrome.alarms) return;
 
-    // Lên lịch kiểm tra dọn cache mỗi 360 phút (6 giờ)
-    chrome.alarms.create(CACHE_CLEANUP_ALARM, {
-      periodInMinutes: 360,
-    });
+    try {
+      // Lên lịch kiểm tra dọn cache mỗi 360 phút (6 giờ)
+      chrome.alarms.create(CACHE_CLEANUP_ALARM, {
+        periodInMinutes: 360,
+      });
+
+      chrome.alarms.onAlarm.addListener((alarm) => {
+        this.handleAlarm(alarm);
+      });
+    } catch (e) {
+      console.warn('[AlarmsHandler] Không thể khởi tạo alarms:', e);
+    }
   }
 
   static async handleAlarm(alarm: chrome.alarms.Alarm): Promise<void> {

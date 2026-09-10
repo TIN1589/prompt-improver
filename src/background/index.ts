@@ -8,28 +8,39 @@ import { ContextMenuHandler } from './handlers/context-menu.handler';
 import { AlarmsHandler } from './handlers/alarms.handler';
 import { MessageRouter } from './message-router';
 
-// 1. Đăng ký vòng đời Extension
-chrome.runtime.onInstalled.addListener(() => {
-  LifecycleHandler.onInstalled();
-});
-
-chrome.runtime.onStartup.addListener(() => {
-  LifecycleHandler.onStartup();
-});
-
-// 2. Thiết lập Menu ngữ cảnh (Context Menu)
-ContextMenuHandler.watchChanges();
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  ContextMenuHandler.handleClick(info, tab);
-});
-
-// 3. Thiết lập tác vụ nền định kỳ (Alarms)
-AlarmsHandler.setup();
-chrome.alarms.onAlarm.addListener((alarm) => {
-  AlarmsHandler.handleAlarm(alarm);
-});
-
-// 4. Khởi động Bộ điều phối Message tập trung
+// 1. Khởi động Bộ điều phối Message tập trung TRƯỚC TIÊN (Quan trọng nhất!)
 MessageRouter.init();
+
+// 2. Đăng ký vòng đời Extension
+if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
+  chrome.runtime.onInstalled.addListener(() => {
+    LifecycleHandler.onInstalled();
+  });
+}
+
+if (typeof chrome !== 'undefined' && chrome.runtime?.onStartup) {
+  chrome.runtime.onStartup.addListener(() => {
+    LifecycleHandler.onStartup();
+  });
+}
+
+// 3. Thiết lập Menu ngữ cảnh (Context Menu) an toàn
+try {
+  ContextMenuHandler.watchChanges();
+  if (typeof chrome !== 'undefined' && chrome.contextMenus?.onClicked) {
+    chrome.contextMenus.onClicked.addListener((info, tab) => {
+      ContextMenuHandler.handleClick(info, tab);
+    });
+  }
+} catch (e) {
+  console.warn('[ContextMenu] Khởi tạo context menu thất bại:', e);
+}
+
+// 4. Thiết lập tác vụ nền định kỳ (Alarms) an toàn
+try {
+  AlarmsHandler.setup();
+} catch (e) {
+  console.warn('[Alarms] Khởi tạo alarms thất bại:', e);
+}
 
 console.log('[Prompt Improver] Background Service Worker đã khởi chạy thành công.');
