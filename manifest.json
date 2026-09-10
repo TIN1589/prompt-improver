@@ -23,8 +23,8 @@
     "<all_urls>"
   ],
   "action": {
-    "default_popup": "src/popup.html",
-    "default_title": "Prompt Improver — Gemini Free Tier",
+    "default_popup": "dist/src/ui/popup/index.html",
+    "default_title": "Prompt Improver — AI Optimizer",
     "default_icon": {
       "16": "assets/icon16.png",
       "48": "assets/icon48.png",
@@ -32,7 +32,7 @@
     }
   },
   "background": {
-    "service_worker": "src/background.js",
+    "service_worker": "dist/background.js",
     "type": "module"
   },
   "content_scripts": [
@@ -52,7 +52,9 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js": ["src/content.js"],
+      "js": [
+        "dist/content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": false
     }
@@ -70,7 +72,13 @@
         "assets/icon48.png",
         "assets/icon128.png"
       ],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "<all_urls>"
+      ]
     }
-  ]
+  ],
+  "options_ui": {
+    "page": "dist/src/ui/options/index.html",
+    "open_in_tab": true
+  }
 }

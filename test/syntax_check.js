@@ -104,7 +104,7 @@ try {
     ['chatgpt.com in hosts',               m.host_permissions?.some(h => h.includes('chatgpt.com'))],
     ['claude.ai in hosts',                 m.host_permissions?.some(h => h.includes('claude.ai'))],
     ['content_scripts defined',            Array.isArray(m.content_scripts) && m.content_scripts.length > 0],
-    ['content.js in scripts',              m.content_scripts?.[0]?.js?.includes('src/content.js')],
+    ['content.js in scripts',              m.content_scripts?.[0]?.js?.some(f => f.includes('content.js'))],
     ['web_accessible_resources defined',   Array.isArray(m.web_accessible_resources)],
     ['content.css accessible',             m.web_accessible_resources?.[0]?.resources?.includes('src/content.css')],
     ['storage permission',                 m.permissions?.includes('storage')],
