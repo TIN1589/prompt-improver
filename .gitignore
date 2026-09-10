@@ -73,6 +73,6 @@ logs/
 *.log
 
 # Documents
-docx/
-*.docx
+docs/
 *.doc
+*.docx
